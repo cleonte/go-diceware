@@ -4,7 +4,8 @@
 *.dll
 *.so
 *.dylib
-diceware
+/diceware
+/cmd/diceware/diceware
 
 # Test binary, built with `go test -c`
 *.test

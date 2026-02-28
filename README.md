@@ -1,16 +1,19 @@
 # go-diceware
 
-A Go implementation of the Diceware passphrase generation method using the EFF large wordlist, inspired by [diceware.dmuth.org](https://diceware.dmuth.org/). 
+A Go implementation of the Diceware passphrase generation method with support for **English** and **Romanian** wordlists, inspired by [diceware.dmuth.org](https://diceware.dmuth.org/). 
 
 This library provides both a Go package for integration into your applications and a command-line tool for generating secure, memorable passphrases with **capitalized words** in **CamelCase format** (no separators by default).
 
 ## Features
 
 - **Cryptographically Secure**: Uses Go's `crypto/rand` for true random number generation
-- **EFF Large Wordlist**: Uses the [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) with 7,776 carefully selected words
+- **Multiple Wordlists**: 
+  - English: [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) with 7,776 carefully selected words
+  - Romanian: [Romanian Diceware wordlist](https://github.com/danciu/diceware.ro) with 7,776 words
+  - **Mixed Mode**: Generate passphrases with a random mix of English and Romanian words
 - **Capitalized CamelCase**: Words are capitalized and concatenated by default (e.g., `ColtDefaultArousal`)
 - **Library and CLI**: Use it as a Go library in your code or as a standalone CLI tool
-- **Flexible**: Customize word count and separators
+- **Flexible**: Customize word count, separators, and language
 - **Well-Tested**: Comprehensive test suite with >85% coverage
 - **Zero Dependencies**: Only uses Go standard library
 
@@ -40,13 +43,31 @@ go build -o diceware ./cmd/diceware
 
 ### CLI Tool
 
-Generate a passphrase with default settings (6 capitalized words, no separator):
+Generate an English passphrase with default settings (6 capitalized words, no separator):
 
 ```bash
 $ diceware
 ColtDefaultArousalThimbleGaslightYearbook
 
-Entropy: 77.6 bits (6 words from 7776 word list)
+Entropy: 77.6 bits (6 words, English wordlist)
+```
+
+Generate a Romanian passphrase:
+
+```bash
+$ diceware -l ro
+AbaAbagerAbajurAbatajAbateAbator
+
+Entropy: 77.6 bits (6 words, Romanian wordlist)
+```
+
+Generate a mixed English and Romanian passphrase:
+
+```bash
+$ diceware -l mixed
+ColtAbagerDefaultAbatajThimbleAbator
+
+Entropy: 77.6 bits (6 words, Mixed (English + Romanian) wordlist)
 ```
 
 Specify number of words:
@@ -55,7 +76,7 @@ Specify number of words:
 $ diceware -w 4
 EfficientSpottyLaurelPhony
 
-Entropy: 51.7 bits (4 words from 7776 word list)
+Entropy: 51.7 bits (4 words, English wordlist)
 ```
 
 Use a space separator for easier reading:
@@ -64,7 +85,7 @@ Use a space separator for easier reading:
 $ diceware -w 4 -s " "
 Reclining Clapping Frugality Slackness
 
-Entropy: 51.7 bits (4 words from 7776 word list)
+Entropy: 51.7 bits (4 words, English wordlist)
 ```
 
 Use a dash separator:
@@ -73,7 +94,16 @@ Use a dash separator:
 $ diceware -w 4 -s "-"
 Sterile-Ascent-Barmaid-Plunge
 
-Entropy: 51.7 bits (4 words from 7776 word list)
+Entropy: 51.7 bits (4 words, English wordlist)
+```
+
+Generate Romanian passphrase with custom separator:
+
+```bash
+$ diceware -l ro -w 4 -s "_"
+Aba_Abager_Abajur_Abataj
+
+Entropy: 51.7 bits (4 words, Romanian wordlist)
 ```
 
 Show dice rolls used to generate the passphrase:
@@ -83,7 +113,7 @@ $ diceware -r -w 3
 Dice rolls: [46122 33544 21546]
 Passphrase: PuritanHatlessCubicle
 
-Entropy: 38.8 bits (3 words from 7776 word list)
+Entropy: 38.8 bits (3 words, English wordlist)
 ```
 
 ### Library Usage
@@ -101,7 +131,7 @@ import (
 )
 
 func main() {
-    // Generate a 6-word passphrase (capitalized, no separator)
+    // Generate a 6-word English passphrase (capitalized, no separator)
     passphrase, err := diceware.Generate(6)
     if err != nil {
         log.Fatal(err)
@@ -109,6 +139,30 @@ func main() {
     fmt.Println(passphrase)
     // Output: ColtDefaultArousalThimbleGaslightYearbook
 }
+```
+
+#### Romanian Passphrase
+
+```go
+// Generate a Romanian passphrase
+passphrase, err := diceware.GenerateWithLanguage(6, diceware.LanguageRomanian)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(passphrase)
+// Output: AbaAbagerAbajurAbatajAbateAbator
+```
+
+#### Mixed Language Passphrase
+
+```go
+// Generate a mixed English and Romanian passphrase
+passphrase, err := diceware.GenerateWithLanguage(6, diceware.LanguageMixed)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(passphrase)
+// Output: ColtAbagerDefaultAbatajThimbleAbator
 ```
 
 #### Custom Separator
@@ -129,12 +183,20 @@ if err != nil {
 }
 fmt.Println(passphrase)
 // Output: Palpable-Sandpaper-Barber-Unmasking
+
+// Generate Romanian with custom separator
+passphrase, err = diceware.GenerateWithLanguageAndSeparator(4, diceware.LanguageRomanian, "_")
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Println(passphrase)
+// Output: Aba_Abager_Abajur_Abataj
 ```
 
 #### With Dice Rolls
 
 ```go
-// Generate and see the dice rolls used
+// Generate and see the dice rolls used (English)
 passphrase, rolls, err := diceware.GenerateWithRolls(4)
 if err != nil {
     log.Fatal(err)
@@ -144,6 +206,14 @@ fmt.Printf("Dice rolls: %v\n", rolls)
 // Output:
 // Passphrase: PalpableSandpaperBarberUnmasking
 // Dice rolls: [43434 52653 13252 62345]
+
+// Generate with dice rolls (Romanian)
+passphrase, rolls, err = diceware.GenerateWithRollsAndLanguage(4, diceware.LanguageRomanian)
+if err != nil {
+    log.Fatal(err)
+}
+fmt.Printf("Passphrase: %s\n", passphrase)
+fmt.Printf("Dice rolls: %v\n", rolls)
 ```
 
 #### Calculate Entropy
@@ -184,25 +254,47 @@ The security of your passphrase depends on the number of words:
 ## How It Works
 
 1. **Rolling Dice**: The library uses Go's `crypto/rand` to simulate rolling five 6-sided dice
-2. **Looking Up Words**: Each 5-digit number (e.g., "43434") corresponds to a word in the EFF wordlist
-3. **Combining Words**: The words are joined together with your chosen separator
+2. **Looking Up Words**: Each 5-digit number (e.g., "43434") corresponds to a word in the wordlist (English or Romanian)
+3. **Combining Words**: The words are capitalized and joined together with your chosen separator
 4. **Entropy**: Each word adds ~12.925 bits of entropy (log₂(7776) ≈ 12.925)
 
 ## API Reference
+
+### Types
+
+#### `Language`
+
+Represents the language for passphrase generation:
+
+- `LanguageEnglish` - Generate passphrases using only English words
+- `LanguageRomanian` - Generate passphrases using only Romanian words  
+- `LanguageMixed` - Generate passphrases using a random mix of English and Romanian words
 
 ### Functions
 
 #### `Generate(wordCount int) (string, error)`
 
-Generates a passphrase with the specified number of words, separated by spaces.
+Generates an English passphrase with the specified number of words, capitalized and concatenated with no separator.
 
 #### `GenerateWithSeparator(wordCount int, separator string) (string, error)`
 
-Generates a passphrase with a custom separator between words.
+Generates an English passphrase with a custom separator between words.
+
+#### `GenerateWithLanguage(wordCount int, lang Language) (string, error)`
+
+Generates a passphrase using the specified language(s), capitalized and concatenated with no separator.
+
+#### `GenerateWithLanguageAndSeparator(wordCount int, lang Language, separator string) (string, error)`
+
+Generates a passphrase using the specified language(s) and custom separator.
 
 #### `GenerateWithRolls(wordCount int) (passphrase string, rolls []string, err error)`
 
-Generates a passphrase and returns the dice rolls used to create it.
+Generates an English passphrase and returns the dice rolls used to create it.
+
+#### `GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase string, rolls []string, err error)`
+
+Generates a passphrase using the specified language(s) and returns the dice rolls used to create it.
 
 #### `Entropy(wordCount int) float64`
 
@@ -210,7 +302,11 @@ Calculates the bits of entropy for a given number of words.
 
 #### `WordlistSize() int`
 
-Returns the number of words in the wordlist (7,776).
+Returns the number of words in the English wordlist (7,776).
+
+#### `WordlistSizeByLanguage(lang Language) int`
+
+Returns the number of words in the wordlist for the specified language.
 
 ## Development
 
@@ -267,11 +363,12 @@ cargo install just
 
 ## About Diceware
 
-Diceware is a method for creating passphrases, originally developed by Arnold Reinhold. This implementation uses the [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases), which was designed to be more memorable and easier to type than the original list.
+Diceware is a method for creating passphrases, originally developed by Arnold Reinhold. This implementation uses the [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) for English and the [Romanian Diceware wordlist](https://github.com/danciu/diceware.ro) by Alex Danciu.
 
 For more information:
 - [Original Diceware](https://theworld.com/~reinhold/diceware.html)
 - [EFF Wordlist Announcement](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases)
+- [Romanian Diceware](https://github.com/danciu/diceware.ro)
 - [XKCD: Password Strength](https://xkcd.com/936/)
 
 ## License
@@ -285,5 +382,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgments
 
 - Arnold Reinhold for creating the Diceware method
-- The EFF for creating an improved, more user-friendly wordlist
+- The EFF for creating an improved, more user-friendly English wordlist
+- Alex Danciu for creating the Romanian Diceware wordlist
 - Inspired by [diceware.dmuth.org](https://diceware.dmuth.org/)

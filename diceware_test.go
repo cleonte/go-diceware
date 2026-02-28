@@ -362,3 +362,128 @@ func TestWordsAreCapitalized(t *testing.T) {
 		}
 	}
 }
+
+// TestGenerateWithLanguageRomanian tests Romanian passphrase generation
+func TestGenerateWithLanguageRomanian(t *testing.T) {
+	passphrase, err := GenerateWithLanguage(6, LanguageRomanian)
+	if err != nil {
+		t.Fatalf("GenerateWithLanguage(Romanian) error = %v", err)
+	}
+	if passphrase == "" {
+		t.Error("GenerateWithLanguage(Romanian) returned empty passphrase")
+	}
+	// Check that first character is capitalized
+	if len(passphrase) > 0 && (passphrase[0] < 'A' || passphrase[0] > 'Z') {
+		t.Errorf("GenerateWithLanguage(Romanian) passphrase doesn't start with capital letter: %s", passphrase)
+	}
+}
+
+// TestGenerateWithLanguageMixed tests mixed language passphrase generation
+func TestGenerateWithLanguageMixed(t *testing.T) {
+	passphrase, err := GenerateWithLanguage(6, LanguageMixed)
+	if err != nil {
+		t.Fatalf("GenerateWithLanguage(Mixed) error = %v", err)
+	}
+	if passphrase == "" {
+		t.Error("GenerateWithLanguage(Mixed) returned empty passphrase")
+	}
+	// Check that first character is capitalized
+	if len(passphrase) > 0 && (passphrase[0] < 'A' || passphrase[0] > 'Z') {
+		t.Errorf("GenerateWithLanguage(Mixed) passphrase doesn't start with capital letter: %s", passphrase)
+	}
+}
+
+// TestGenerateWithLanguageAndSeparator tests language with separator
+func TestGenerateWithLanguageAndSeparator(t *testing.T) {
+	tests := []struct {
+		name      string
+		lang      Language
+		separator string
+	}{
+		{"Romanian with space", LanguageRomanian, " "},
+		{"Mixed with dash", LanguageMixed, "-"},
+		{"English with underscore", LanguageEnglish, "_"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			passphrase, err := GenerateWithLanguageAndSeparator(4, tt.lang, tt.separator)
+			if err != nil {
+				t.Fatalf("GenerateWithLanguageAndSeparator() error = %v", err)
+			}
+			if passphrase == "" {
+				t.Error("GenerateWithLanguageAndSeparator() returned empty passphrase")
+			}
+			// Check separator is present (for non-empty separator)
+			if tt.separator != "" {
+				if !strings.Contains(passphrase, tt.separator) {
+					t.Errorf("GenerateWithLanguageAndSeparator() passphrase doesn't contain separator %q: %s", tt.separator, passphrase)
+				}
+			}
+		})
+	}
+}
+
+// TestGenerateWithRollsAndLanguage tests roll generation with different languages
+func TestGenerateWithRollsAndLanguage(t *testing.T) {
+	tests := []struct {
+		name string
+		lang Language
+	}{
+		{"English", LanguageEnglish},
+		{"Romanian", LanguageRomanian},
+		{"Mixed", LanguageMixed},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			passphrase, rolls, err := GenerateWithRollsAndLanguage(4, tt.lang)
+			if err != nil {
+				t.Fatalf("GenerateWithRollsAndLanguage() error = %v", err)
+			}
+			if passphrase == "" {
+				t.Error("GenerateWithRollsAndLanguage() returned empty passphrase")
+			}
+			if len(rolls) != 4 {
+				t.Errorf("GenerateWithRollsAndLanguage() returned %d rolls, want 4", len(rolls))
+			}
+			// Verify each roll is 5 digits
+			for i, roll := range rolls {
+				if len(roll) != 5 {
+					t.Errorf("Roll %d has length %d, want 5: %s", i, len(roll), roll)
+				}
+			}
+		})
+	}
+}
+
+// TestWordlistSizeByLanguage tests wordlist size retrieval by language
+func TestWordlistSizeByLanguage(t *testing.T) {
+	tests := []struct {
+		name     string
+		lang     Language
+		wantSize int
+	}{
+		{"English", LanguageEnglish, 7776},
+		{"Romanian", LanguageRomanian, 7776},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			size := WordlistSizeByLanguage(tt.lang)
+			if size != tt.wantSize {
+				t.Errorf("WordlistSizeByLanguage(%v) = %d, want %d", tt.lang, size, tt.wantSize)
+			}
+		})
+	}
+}
+
+// TestRomanianWordlistLoaded tests that Romanian wordlist is properly loaded
+func TestRomanianWordlistLoaded(t *testing.T) {
+	if len(wordlistRomanian) == 0 {
+		t.Error("Romanian wordlist is empty")
+	}
+	if len(wordlistRomanian) < 7000 {
+		t.Errorf("Romanian wordlist has only %d words, expected around 7776", len(wordlistRomanian))
+	}
+}

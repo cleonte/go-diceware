@@ -1,5 +1,5 @@
 // Package diceware provides cryptographically secure passphrase generation
-// using the Diceware method with the EFF large wordlist.
+// using the Diceware method with the EFF large wordlist or Romanian wordlist.
 //
 // The Diceware method generates passphrases by rolling five dice to create
 // a 5-digit number, which is then used to look up a word in a wordlist.
@@ -7,7 +7,7 @@
 //
 // Example usage:
 //
-//	// Generate a passphrase with 6 words
+//	// Generate a passphrase with 6 words (English)
 //	passphrase, err := diceware.Generate(6)
 //	if err != nil {
 //	    log.Fatal(err)
@@ -16,6 +16,20 @@
 //
 //	// Generate with custom separator
 //	passphrase, err := diceware.GenerateWithSeparator(6, "-")
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(passphrase)
+//
+//	// Generate Romanian passphrase
+//	passphrase, err := diceware.GenerateWithLanguage(6, LanguageRomanian)
+//	if err != nil {
+//	    log.Fatal(err)
+//	}
+//	fmt.Println(passphrase)
+//
+//	// Generate mixed English and Romanian passphrase
+//	passphrase, err := diceware.GenerateWithLanguage(6, LanguageMixed)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
@@ -31,12 +45,29 @@ import (
 )
 
 //go:embed internal/wordlist/eff_large_wordlist.txt
-var wordlistData string
+var wordlistEnglishData string
 
-var wordlist map[string]string
+//go:embed internal/wordlist/ro_diceware.txt
+var wordlistRomanianData string
+
+var wordlistEnglish map[string]string
+var wordlistRomanian map[string]string
+
+// Language represents the language for passphrase generation
+type Language int
+
+const (
+	// LanguageEnglish generates passphrases using only English words
+	LanguageEnglish Language = iota
+	// LanguageRomanian generates passphrases using only Romanian words
+	LanguageRomanian
+	// LanguageMixed generates passphrases using a mix of English and Romanian words
+	LanguageMixed
+)
 
 func init() {
-	wordlist = parseWordlist(wordlistData)
+	wordlistEnglish = parseWordlist(wordlistEnglishData)
+	wordlistRomanian = parseWordlist(wordlistRomanianData)
 }
 
 // parseWordlist parses the embedded wordlist file into a map
@@ -84,12 +115,39 @@ func rollFiveDice() (string, error) {
 // getWord rolls five dice and returns the corresponding word from the wordlist,
 // capitalized to match the Diceware web implementation
 func getWord() (string, error) {
+	return getWordFromLanguage(LanguageEnglish)
+}
+
+// getWordFromLanguage rolls five dice and returns the corresponding word from the specified language wordlist
+func getWordFromLanguage(lang Language) (string, error) {
 	roll, err := rollFiveDice()
 	if err != nil {
 		return "", err
 	}
 
-	word, exists := wordlist[roll]
+	var word string
+	var exists bool
+
+	switch lang {
+	case LanguageEnglish:
+		word, exists = wordlistEnglish[roll]
+	case LanguageRomanian:
+		word, exists = wordlistRomanian[roll]
+	case LanguageMixed:
+		// For mixed mode, randomly choose between English and Romanian
+		useBool, err := rand.Int(rand.Reader, big.NewInt(2))
+		if err != nil {
+			return "", fmt.Errorf("failed to select language: %w", err)
+		}
+		if useBool.Int64() == 0 {
+			word, exists = wordlistEnglish[roll]
+		} else {
+			word, exists = wordlistRomanian[roll]
+		}
+	default:
+		return "", fmt.Errorf("unsupported language: %v", lang)
+	}
+
 	if !exists {
 		return "", fmt.Errorf("no word found for dice roll: %s", roll)
 	}
@@ -136,13 +194,34 @@ func Generate(wordCount int) (string, error) {
 //
 // Returns an error if wordCount is less than 1 or if random number generation fails.
 func GenerateWithSeparator(wordCount int, separator string) (string, error) {
+	return GenerateWithLanguageAndSeparator(wordCount, LanguageEnglish, separator)
+}
+
+// GenerateWithLanguage creates a passphrase with the specified number of words
+// using the specified language(s). Words are capitalized and concatenated with no separator.
+//
+// Languages:
+//   - LanguageEnglish - English words only
+//   - LanguageRomanian - Romanian words only
+//   - LanguageMixed - Mix of English and Romanian words
+//
+// Returns an error if wordCount is less than 1 or if random number generation fails.
+func GenerateWithLanguage(wordCount int, lang Language) (string, error) {
+	return GenerateWithLanguageAndSeparator(wordCount, lang, "")
+}
+
+// GenerateWithLanguageAndSeparator creates a passphrase with the specified number of words
+// using the specified language(s) and joins them with the provided separator.
+//
+// Returns an error if wordCount is less than 1 or if random number generation fails.
+func GenerateWithLanguageAndSeparator(wordCount int, lang Language, separator string) (string, error) {
 	if wordCount < 1 {
 		return "", fmt.Errorf("word count must be at least 1, got %d", wordCount)
 	}
 
 	words := make([]string, wordCount)
 	for i := 0; i < wordCount; i++ {
-		word, err := getWord()
+		word, err := getWordFromLanguage(lang)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate word %d: %w", i+1, err)
 		}
@@ -158,6 +237,14 @@ func GenerateWithSeparator(wordCount int, separator string) (string, error) {
 //
 // Returns a passphrase, a slice of dice roll strings, and an error.
 func GenerateWithRolls(wordCount int) (passphrase string, rolls []string, err error) {
+	return GenerateWithRollsAndLanguage(wordCount, LanguageEnglish)
+}
+
+// GenerateWithRollsAndLanguage returns both the passphrase and the dice rolls used to generate it
+// using the specified language(s). Words are capitalized and concatenated with no separator.
+//
+// Returns a passphrase, a slice of dice roll strings, and an error.
+func GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase string, rolls []string, err error) {
 	if wordCount < 1 {
 		return "", nil, fmt.Errorf("word count must be at least 1, got %d", wordCount)
 	}
@@ -171,7 +258,29 @@ func GenerateWithRolls(wordCount int) (passphrase string, rolls []string, err er
 			return "", nil, fmt.Errorf("failed to generate dice roll %d: %w", i+1, err)
 		}
 
-		word, exists := wordlist[roll]
+		var word string
+		var exists bool
+
+		switch lang {
+		case LanguageEnglish:
+			word, exists = wordlistEnglish[roll]
+		case LanguageRomanian:
+			word, exists = wordlistRomanian[roll]
+		case LanguageMixed:
+			// For mixed mode, randomly choose between English and Romanian
+			useBool, err := rand.Int(rand.Reader, big.NewInt(2))
+			if err != nil {
+				return "", nil, fmt.Errorf("failed to select language: %w", err)
+			}
+			if useBool.Int64() == 0 {
+				word, exists = wordlistEnglish[roll]
+			} else {
+				word, exists = wordlistRomanian[roll]
+			}
+		default:
+			return "", nil, fmt.Errorf("unsupported language: %v", lang)
+		}
+
 		if !exists {
 			return "", nil, fmt.Errorf("no word found for dice roll: %s", roll)
 		}
@@ -191,7 +300,22 @@ func Entropy(wordCount int) float64 {
 	return float64(wordCount) * bitsPerWord
 }
 
-// WordlistSize returns the number of words in the wordlist
+// WordlistSize returns the number of words in the English wordlist
 func WordlistSize() int {
-	return len(wordlist)
+	return len(wordlistEnglish)
+}
+
+// WordlistSizeByLanguage returns the number of words in the wordlist for the specified language
+func WordlistSizeByLanguage(lang Language) int {
+	switch lang {
+	case LanguageEnglish:
+		return len(wordlistEnglish)
+	case LanguageRomanian:
+		return len(wordlistRomanian)
+	case LanguageMixed:
+		// For mixed mode, return the combined size
+		return len(wordlistEnglish) + len(wordlistRomanian)
+	default:
+		return 0
+	}
 }
