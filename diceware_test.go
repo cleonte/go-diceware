@@ -33,7 +33,7 @@ func TestGenerate(t *testing.T) {
 					t.Error("Generate() returned empty passphrase")
 				}
 				// Check that words are capitalized
-				if len(passphrase) > 0 && passphrase[0] < 'A' || passphrase[0] > 'Z' {
+				if len(passphrase) > 0 && (passphrase[0] < 'A' || passphrase[0] > 'Z') {
 					t.Errorf("Generate() passphrase doesn't start with capital letter: %s", passphrase)
 				}
 			}
@@ -485,5 +485,169 @@ func TestRomanianWordlistLoaded(t *testing.T) {
 	}
 	if len(wordlistRomanian) < 7000 {
 		t.Errorf("Romanian wordlist has only %d words, expected around 7776", len(wordlistRomanian))
+	}
+}
+
+// TestIsValidWord tests the isValidWord function with various inputs
+func TestIsValidWord(t *testing.T) {
+	tests := []struct {
+		name string
+		word string
+		want bool
+	}{
+		// Valid words
+		{"valid lowercase", "hello", true},
+		{"valid uppercase", "HELLO", true},
+		{"valid mixed case", "Hello", true},
+		{"valid 3 chars (boundary)", "abc", true},
+		{"valid long word", "extraordinary", true},
+
+		// Invalid: too short
+		{"invalid 2 chars", "ab", false},
+		{"invalid 1 char", "a", false},
+		{"invalid empty", "", false},
+
+		// Invalid: contains numbers
+		{"invalid with number at end", "abc123", false},
+		{"invalid with number at start", "123abc", false},
+		{"invalid with number in middle", "ab12cd", false},
+		{"invalid just numbers", "12345", false},
+
+		// Invalid: contains special characters
+		{"invalid with exclamation", "hello!", false},
+		{"invalid with dash", "hello-world", false},
+		{"invalid with underscore", "hello_world", false},
+		{"invalid with space", "hello world", false},
+		{"invalid with dot", "hello.", false},
+		{"invalid with comma", "hello,", false},
+		{"invalid with apostrophe", "don't", false},
+		{"invalid with @", "user@host", false},
+
+		// Invalid: symbols only
+		{"invalid symbols only", "!!!", false},
+		{"invalid equals", "===", false},
+		{"invalid question marks", "???", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isValidWord(tt.word)
+			if got != tt.want {
+				t.Errorf("isValidWord(%q) = %v, want %v", tt.word, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestIsValidRoll tests the isValidRoll function with various inputs
+func TestIsValidRoll(t *testing.T) {
+	tests := []struct {
+		name string
+		roll string
+		want bool
+	}{
+		// Valid rolls
+		{"valid 11111", "11111", true},
+		{"valid 66666", "66666", true},
+		{"valid 12345", "12345", true},
+		{"valid 54321", "54321", true},
+		{"valid mixed", "13526", true},
+
+		// Invalid: wrong length
+		{"invalid too short", "1234", false},
+		{"invalid too long", "123456", false},
+		{"invalid empty", "", false},
+		{"invalid 1 digit", "1", false},
+
+		// Invalid: out of range
+		{"invalid with 0", "01234", false},
+		{"invalid with 7", "71234", false},
+		{"invalid with 8", "12348", false},
+		{"invalid with 9", "99999", false},
+
+		// Invalid: non-digits
+		{"invalid with letter", "1234a", false},
+		{"invalid with space", "123 5", false},
+		{"invalid with dash", "123-5", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isValidRoll(tt.roll)
+			if got != tt.want {
+				t.Errorf("isValidRoll(%q) = %v, want %v", tt.roll, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestParseWordlistValidation tests that parseWordlist properly validates input
+func TestParseWordlistValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		data      string
+		wantPanic bool
+	}{
+		{
+			name:      "valid wordlist",
+			data:      "11111 word1\n22222 word2\n33333 word3",
+			wantPanic: false,
+		},
+		{
+			name:      "invalid - missing word",
+			data:      "11111\n22222 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "invalid - too many fields",
+			data:      "11111 word1 extra\n22222 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "invalid - bad roll (has 0)",
+			data:      "01111 word1\n22222 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "invalid - bad roll (has 7)",
+			data:      "71111 word1\n22222 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "invalid - bad roll (too short)",
+			data:      "1111 word1\n22222 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "invalid - bad roll (too long)",
+			data:      "111111 word1\n22222 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "invalid - duplicate roll",
+			data:      "11111 word1\n11111 word2",
+			wantPanic: true,
+		},
+		{
+			name:      "valid - with empty lines",
+			data:      "11111 word1\n\n22222 word2\n\n",
+			wantPanic: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if (r != nil) != tt.wantPanic {
+					if tt.wantPanic {
+						t.Errorf("parseWordlist() should have panicked but didn't")
+					} else {
+						t.Errorf("parseWordlist() panicked unexpectedly: %v", r)
+					}
+				}
+			}()
+			_ = parseWordlist(tt.data)
+		})
 	}
 }

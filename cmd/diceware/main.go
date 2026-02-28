@@ -4,6 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+	"unicode"
 
 	"github.com/cleonte/go-diceware"
 )
@@ -70,13 +72,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		// Apply separator if not default (when showing rolls, regenerate with separator)
+		// Apply separator if specified (split and rejoin to avoid regenerating)
 		if separator != "" {
-			passphrase, err = diceware.GenerateWithLanguageAndSeparator(words, lang, separator)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
+			wordList := splitCapitalizedWords(passphrase)
+			passphrase = joinWithSeparator(wordList, separator)
 		}
 
 		fmt.Println("Dice rolls:", rolls)
@@ -163,4 +162,36 @@ For more information about Diceware:
   https://github.com/danciu/diceware.ro (Romanian wordlist)
 
 `, defaultWords, minWords, maxWords)
+}
+
+// splitCapitalizedWords splits a string of concatenated capitalized words
+// e.g., "HelloWorldTest" -> ["Hello", "World", "Test"]
+func splitCapitalizedWords(s string) []string {
+	if s == "" {
+		return nil
+	}
+
+	var words []string
+	var currentWord strings.Builder
+
+	for i, r := range s {
+		if i > 0 && unicode.IsUpper(r) {
+			// Start of a new word
+			words = append(words, currentWord.String())
+			currentWord.Reset()
+		}
+		currentWord.WriteRune(r)
+	}
+
+	// Add the last word
+	if currentWord.Len() > 0 {
+		words = append(words, currentWord.String())
+	}
+
+	return words
+}
+
+// joinWithSeparator joins words with the specified separator
+func joinWithSeparator(words []string, separator string) string {
+	return strings.Join(words, separator)
 }

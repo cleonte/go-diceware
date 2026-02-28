@@ -71,23 +71,52 @@ func init() {
 }
 
 // parseWordlist parses the embedded wordlist file into a map
+// It validates the format and panics if the wordlist is malformed
 func parseWordlist(data string) map[string]string {
-	result := make(map[string]string)
+	result := make(map[string]string, 7776) // Pre-allocate for expected size
 	lines := strings.Split(data, "\n")
 
-	for _, line := range lines {
+	for i, line := range lines {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue
 		}
 
 		parts := strings.Fields(line)
-		if len(parts) == 2 {
-			result[parts[0]] = parts[1]
+		if len(parts) != 2 {
+			panic(fmt.Sprintf("invalid wordlist format at line %d: expected 2 fields, got %d: %q", i+1, len(parts), line))
 		}
+
+		roll := parts[0]
+		word := parts[1]
+
+		// Validate roll format (5 digits, each 1-6)
+		if !isValidRoll(roll) {
+			panic(fmt.Sprintf("invalid dice roll at line %d: %q (expected 5 digits between 1-6)", i+1, roll))
+		}
+
+		// Check for duplicate rolls
+		if _, exists := result[roll]; exists {
+			panic(fmt.Sprintf("duplicate dice roll at line %d: %q", i+1, roll))
+		}
+
+		result[roll] = word
 	}
 
 	return result
+}
+
+// isValidRoll checks if a roll string is valid (5 digits, each 1-6)
+func isValidRoll(roll string) bool {
+	if len(roll) != 5 {
+		return false
+	}
+	for _, ch := range roll {
+		if ch < '1' || ch > '6' {
+			return false
+		}
+	}
+	return true
 }
 
 // rollDice simulates rolling a single die (1-6) using cryptographically secure random numbers
