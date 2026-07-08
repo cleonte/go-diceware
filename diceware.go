@@ -185,18 +185,22 @@ func isValidWord(word string) bool {
 	return true
 }
 
-// getWordFromLanguage rolls five dice and returns the corresponding word from the specified language wordlist
-// For Romanian, it re-rolls if it gets a non-alphabetic entry (numbers, symbols, etc.)
-func getWordFromLanguage(lang Language) (string, error) {
+// rollWord rolls five dice and resolves them to a word for the specified
+// language, rerolling internally (up to maxAttempts) if the roll lands on a
+// filtered/invalid entry - e.g. Romanian's ~241 numeric/symbol filler
+// entries. Returns the raw (uncapitalized) word alongside the winning dice
+// roll string. This is the single place the reroll/language-selection logic
+// lives; getWordFromLanguage and GenerateWithRollsAndLanguage both build on
+// top of it instead of duplicating the switch/reroll logic.
+func rollWord(lang Language) (word string, roll string, err error) {
 	const maxAttempts = 100 // Prevent infinite loops
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
-		roll, err := rollFiveDice()
+		roll, err = rollFiveDice()
 		if err != nil {
-			return "", err
+			return "", "", err
 		}
 
-		var word string
 		var exists bool
 
 		switch lang {
@@ -211,9 +215,9 @@ func getWordFromLanguage(lang Language) (string, error) {
 			}
 		case LanguageMixed:
 			// For mixed mode, randomly choose between English and Romanian
-			useBool, err := rand.Int(rand.Reader, big.NewInt(2))
-			if err != nil {
-				return "", fmt.Errorf("failed to select language: %w", err)
+			useBool, berr := rand.Int(rand.Reader, big.NewInt(2))
+			if berr != nil {
+				return "", "", fmt.Errorf("failed to select language: %w", berr)
 			}
 			if useBool.Int64() == 0 {
 				word, exists = wordlistEnglish[roll]
@@ -225,18 +229,28 @@ func getWordFromLanguage(lang Language) (string, error) {
 				}
 			}
 		default:
-			return "", fmt.Errorf("unsupported language: %v", lang)
+			return "", "", fmt.Errorf("unsupported language: %v", lang)
 		}
 
 		if !exists {
-			return "", fmt.Errorf("no word found for dice roll: %s", roll)
+			return "", "", fmt.Errorf("no word found for dice roll: %s", roll)
 		}
 
-		// Capitalize first letter
-		return capitalize(word), nil
+		return word, roll, nil
 	}
 
-	return "", fmt.Errorf("failed to generate valid word after %d attempts", maxAttempts)
+	return "", "", fmt.Errorf("failed to generate valid word after %d attempts", maxAttempts)
+}
+
+// getWordFromLanguage rolls five dice and returns the corresponding word from the specified language wordlist,
+// capitalized to match the Diceware web implementation. For Romanian, it re-rolls if it gets a non-alphabetic
+// entry (numbers, symbols, etc.) - see rollWord.
+func getWordFromLanguage(lang Language) (string, error) {
+	word, _, err := rollWord(lang)
+	if err != nil {
+		return "", err
+	}
+	return capitalize(word), nil
 }
 
 // capitalize returns the word with the first letter capitalized
@@ -334,60 +348,12 @@ func GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase stri
 
 	words := make([]string, wordCount)
 	rolls = make([]string, wordCount)
-	const maxAttempts = 100
 
 	for i := 0; i < wordCount; i++ {
-		var word string
-		var roll string
-		found := false
-
-		for attempt := 0; attempt < maxAttempts && !found; attempt++ {
-			roll, err = rollFiveDice()
-			if err != nil {
-				return "", nil, fmt.Errorf("failed to generate dice roll %d: %w", i+1, err)
-			}
-
-			var exists bool
-
-			switch lang {
-			case LanguageEnglish:
-				word, exists = wordlistEnglish[roll]
-			case LanguageRomanian:
-				word, exists = wordlistRomanian[roll]
-				// Skip non-word entries in Romanian wordlist
-				if exists && !isValidWord(word) {
-					continue
-				}
-			case LanguageMixed:
-				// For mixed mode, randomly choose between English and Romanian
-				useBool, err := rand.Int(rand.Reader, big.NewInt(2))
-				if err != nil {
-					return "", nil, fmt.Errorf("failed to select language: %w", err)
-				}
-				if useBool.Int64() == 0 {
-					word, exists = wordlistEnglish[roll]
-				} else {
-					word, exists = wordlistRomanian[roll]
-					// Skip non-word entries in Romanian wordlist
-					if exists && !isValidWord(word) {
-						continue
-					}
-				}
-			default:
-				return "", nil, fmt.Errorf("unsupported language: %v", lang)
-			}
-
-			if !exists {
-				return "", nil, fmt.Errorf("no word found for dice roll: %s", roll)
-			}
-
-			found = true
+		word, roll, werr := rollWord(lang)
+		if werr != nil {
+			return "", nil, fmt.Errorf("failed to generate word %d: %w", i+1, werr)
 		}
-
-		if !found {
-			return "", nil, fmt.Errorf("failed to generate valid word after %d attempts", maxAttempts)
-		}
-
 		words[i] = capitalize(word)
 		rolls[i] = roll
 	}
