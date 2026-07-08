@@ -91,7 +91,7 @@ func main() {
 	}
 
 	// Show entropy information
-	entropy := diceware.Entropy(words)
+	entropy := diceware.EntropyForLanguage(words, lang)
 	langName := "English"
 	if lang == diceware.LanguageRomanian {
 		langName = "Romanian"

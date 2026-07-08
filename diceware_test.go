@@ -189,6 +189,47 @@ func TestEntropy(t *testing.T) {
 	}
 }
 
+func TestEntropyForLanguage(t *testing.T) {
+	tests := []struct {
+		name      string
+		wordCount int
+		lang      Language
+		want      float64
+	}{
+		// English is unfiltered (7,776 usable words): matches plain Entropy().
+		{"English matches Entropy", 6, LanguageEnglish, 77.55},
+		// Romanian only has 7,535 usable words (241 filler entries are
+		// skipped), so bits/word is slightly lower than English's 12.925.
+		{"Romanian lower than English", 6, LanguageRomanian, 77.28},
+		// Mixed draws from the combined 15,311-word usable space (English +
+		// valid Romanian), so bits/word is notably higher than either
+		// language alone.
+		{"Mixed higher than either language", 6, LanguageMixed, 83.41},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := EntropyForLanguage(tt.wordCount, tt.lang)
+			if got < tt.want-0.1 || got > tt.want+0.1 {
+				t.Errorf("EntropyForLanguage(%d, %v) = %f, want approximately %f", tt.wordCount, tt.lang, got, tt.want)
+			}
+		})
+	}
+
+	// Romanian and Mixed must NOT report the same entropy as English for
+	// the same word count - that was the original bug (Entropy() ignored
+	// language entirely).
+	en := EntropyForLanguage(6, LanguageEnglish)
+	ro := EntropyForLanguage(6, LanguageRomanian)
+	mixed := EntropyForLanguage(6, LanguageMixed)
+	if ro >= en {
+		t.Errorf("Romanian entropy (%f) should be lower than English (%f), since 241 wordlist entries are filtered out", ro, en)
+	}
+	if mixed <= en {
+		t.Errorf("Mixed entropy (%f) should be higher than English (%f), since it draws from a larger combined wordlist", mixed, en)
+	}
+}
+
 func TestWordlistSize(t *testing.T) {
 	size := WordlistSize()
 	// EFF large wordlist has exactly 7,776 words (6^5)
@@ -465,7 +506,13 @@ func TestWordlistSizeByLanguage(t *testing.T) {
 		wantSize int
 	}{
 		{"English", LanguageEnglish, 7776},
-		{"Romanian", LanguageRomanian, 7776},
+		// Romanian's raw wordlist has 7,776 entries too, but 241 are
+		// numeric/symbol filler that isValidWord rejects and
+		// getWordFromLanguage rerolls past, so only 7,535 are actually
+		// reachable during generation.
+		{"Romanian", LanguageRomanian, 7535},
+		// Mixed combines both usable pools.
+		{"Mixed", LanguageMixed, 7776 + 7535},
 	}
 
 	for _, tt := range tests {

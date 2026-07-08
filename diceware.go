@@ -40,6 +40,7 @@ import (
 	"crypto/rand"
 	_ "embed"
 	"fmt"
+	"math"
 	"math/big"
 	"strings"
 )
@@ -52,6 +53,17 @@ var wordlistRomanianData string
 
 var wordlistEnglish map[string]string
 var wordlistRomanian map[string]string
+
+// validWordCountEnglish and validWordCountRomanian track how many entries in
+// each wordlist actually get used to produce a word (i.e., how many survive
+// isValidWord). English entries are never filtered during generation, so its
+// count always equals len(wordlistEnglish). Romanian's raw map includes ~241
+// filler entries (digits/symbols used to fill out all 7,776 roll
+// combinations) that getWordFromLanguage rerolls past, so its usable count is
+// lower than len(wordlistRomanian). These are the counts that must be used
+// for entropy/size reporting, not the raw map length.
+var validWordCountEnglish int
+var validWordCountRomanian int
 
 // Language represents the language for passphrase generation
 type Language int
@@ -68,6 +80,19 @@ const (
 func init() {
 	wordlistEnglish = parseWordlist(wordlistEnglishData)
 	wordlistRomanian = parseWordlist(wordlistRomanianData)
+
+	// English words are used as-is (no isValidWord filtering during
+	// generation), so every parsed entry is usable.
+	validWordCountEnglish = len(wordlistEnglish)
+
+	// Romanian entries that fail isValidWord get rerolled at generation
+	// time and can never appear in output, so only count the ones that
+	// would actually be selectable.
+	for _, word := range wordlistRomanian {
+		if isValidWord(word) {
+			validWordCountRomanian++
+		}
+	}
 }
 
 // parseWordlist parses the embedded wordlist file into a map
@@ -370,29 +395,56 @@ func GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase stri
 	return strings.Join(words, ""), rolls, nil
 }
 
-// Entropy calculates the bits of entropy for a given number of words.
-// The EFF large wordlist has 7,776 words (6^5), providing ~12.925 bits per word.
+// Entropy calculates the bits of entropy for a given number of words,
+// assuming the English wordlist. Equivalent to
+// EntropyForLanguage(wordCount, LanguageEnglish).
+//
+// The EFF large wordlist has 7,776 usable words (6^5), providing ~12.925
+// bits per word.
 func Entropy(wordCount int) float64 {
-	// log2(7776) ≈ 12.925 bits per word
-	const bitsPerWord = 12.925
-	return float64(wordCount) * bitsPerWord
+	return EntropyForLanguage(wordCount, LanguageEnglish)
 }
 
-// WordlistSize returns the number of words in the English wordlist
+// EntropyForLanguage calculates the bits of entropy for a given number of
+// words in the specified language. Unlike Entropy, this accounts for the
+// fact that different wordlists have different usable sizes:
+//
+//   - English: 7,776 words, ~12.925 bits/word
+//   - Romanian: 7,535 usable words (241 filler entries are skipped during
+//     generation), ~12.879 bits/word
+//   - Mixed: 15,311 usable words combined (English + valid Romanian),
+//     ~13.902 bits/word, since each word also carries the extra bit from
+//     the English/Romanian coin flip
+func EntropyForLanguage(wordCount int, lang Language) float64 {
+	size := WordlistSizeByLanguage(lang)
+	if size < 2 {
+		return 0
+	}
+	return float64(wordCount) * math.Log2(float64(size))
+}
+
+// WordlistSize returns the number of usable words in the English wordlist
 func WordlistSize() int {
-	return len(wordlistEnglish)
+	return validWordCountEnglish
 }
 
-// WordlistSizeByLanguage returns the number of words in the wordlist for the specified language
+// WordlistSizeByLanguage returns the number of usable words in the wordlist
+// for the specified language, i.e., the number of distinct dice rolls that
+// actually produce a word during generation (not the raw entry count -
+// Romanian's raw wordlist includes ~241 filler entries that are skipped).
 func WordlistSizeByLanguage(lang Language) int {
 	switch lang {
 	case LanguageEnglish:
-		return len(wordlistEnglish)
+		return validWordCountEnglish
 	case LanguageRomanian:
-		return len(wordlistRomanian)
+		return validWordCountRomanian
 	case LanguageMixed:
-		// For mixed mode, return the combined size
-		return len(wordlistEnglish) + len(wordlistRomanian)
+		// Mixed mode selects with a fair coin flip between the two
+		// wordlists and rerolls the whole attempt (coin + dice) if it
+		// lands on an invalid Romanian entry. That rejection sampling
+		// preserves uniformity, so the combined usable space really is
+		// just the sum of both usable counts.
+		return validWordCountEnglish + validWordCountRomanian
 	default:
 		return 0
 	}

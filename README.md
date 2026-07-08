@@ -49,7 +49,7 @@ Generate an English passphrase with default settings (6 capitalized words, no se
 $ diceware
 ColtDefaultArousalThimbleGaslightYearbook
 
-Entropy: 77.6 bits (6 words, English wordlist)
+Entropy: 77.5 bits (6 words, English wordlist)
 ```
 
 Generate a Romanian passphrase:
@@ -58,7 +58,7 @@ Generate a Romanian passphrase:
 $ diceware -l ro
 AbaAbagerAbajurAbatajAbateAbator
 
-Entropy: 77.6 bits (6 words, Romanian wordlist)
+Entropy: 77.3 bits (6 words, Romanian wordlist)
 ```
 
 Generate a mixed English and Romanian passphrase:
@@ -67,7 +67,7 @@ Generate a mixed English and Romanian passphrase:
 $ diceware -l mixed
 ColtAbagerDefaultAbatajThimbleAbator
 
-Entropy: 77.6 bits (6 words, Mixed (English + Romanian) wordlist)
+Entropy: 83.4 bits (6 words, Mixed (English + Romanian) wordlist)
 ```
 
 Specify number of words:
@@ -103,7 +103,7 @@ Generate Romanian passphrase with custom separator:
 $ diceware -l ro -w 4 -s "_"
 Aba_Abager_Abajur_Abataj
 
-Entropy: 51.7 bits (4 words, Romanian wordlist)
+Entropy: 51.5 bits (4 words, Romanian wordlist)
 ```
 
 Show dice rolls used to generate the passphrase:
@@ -219,17 +219,23 @@ fmt.Printf("Dice rolls: %v\n", rolls)
 #### Calculate Entropy
 
 ```go
-// Calculate the entropy for a given number of words
+// Calculate the entropy for a given number of words (assumes English)
 entropy := diceware.Entropy(6)
 fmt.Printf("Entropy: %.1f bits\n", entropy)
-// Output: Entropy: 77.6 bits
+// Output: Entropy: 77.5 bits
+
+// Language-aware entropy - Romanian and Mixed have different usable
+// wordlist sizes than English, so their entropy differs too
+enEntropy := diceware.EntropyForLanguage(6, diceware.LanguageEnglish) // 77.5 bits
+roEntropy := diceware.EntropyForLanguage(6, diceware.LanguageRomanian) // 77.3 bits (7,535 usable words)
+mixedEntropy := diceware.EntropyForLanguage(6, diceware.LanguageMixed) // 83.4 bits (15,311 usable words)
 ```
 
 ## Security Considerations
 
 ### Recommended Word Counts
 
-The security of your passphrase depends on the number of words:
+The security of your passphrase depends on the number of words (figures below assume English; see [Calculate Entropy](#calculate-entropy) for how Romanian/Mixed differ):
 
 | Words | Entropy | Use Case |
 |-------|---------|----------|
@@ -256,7 +262,7 @@ The security of your passphrase depends on the number of words:
 1. **Rolling Dice**: The library uses Go's `crypto/rand` to simulate rolling five 6-sided dice
 2. **Looking Up Words**: Each 5-digit number (e.g., "43434") corresponds to a word in the wordlist (English or Romanian)
 3. **Combining Words**: The words are capitalized and joined together with your chosen separator
-4. **Entropy**: Each word adds ~12.925 bits of entropy (log₂(7776) ≈ 12.925)
+4. **Entropy**: Each word adds ~12.925 bits of entropy for English (log₂(7776) ≈ 12.925). Romanian and Mixed differ since 241 wordlist entries are filtered out - see [Calculate Entropy](#calculate-entropy)
 
 ## API Reference
 
@@ -298,15 +304,19 @@ Generates a passphrase using the specified language(s) and returns the dice roll
 
 #### `Entropy(wordCount int) float64`
 
-Calculates the bits of entropy for a given number of words.
+Calculates the bits of entropy for a given number of words, assuming the English wordlist. Equivalent to `EntropyForLanguage(wordCount, LanguageEnglish)`.
+
+#### `EntropyForLanguage(wordCount int, lang Language) float64`
+
+Calculates the bits of entropy for a given number of words in the specified language. Romanian and Mixed have different usable wordlist sizes than English (see `WordlistSizeByLanguage`), so their entropy differs too - use this instead of `Entropy` when generating non-English passphrases.
 
 #### `WordlistSize() int`
 
-Returns the number of words in the English wordlist (7,776).
+Returns the number of usable words in the English wordlist (7,776).
 
 #### `WordlistSizeByLanguage(lang Language) int`
 
-Returns the number of words in the wordlist for the specified language.
+Returns the number of usable words in the wordlist for the specified language - i.e., how many distinct dice rolls actually produce a word (English: 7,776; Romanian: 7,535, since 241 filler entries are skipped; Mixed: 15,311 combined).
 
 ## Development
 
