@@ -24,30 +24,24 @@ func main() {
 	fmt.Println("Hello")
 }
 `
-	os.WriteFile("/tmp/minimal.go", []byte(minimalCode), 0644)
-
-	// Create a program with diceware
-	withDicewareCode := `package main
-import (
-	"fmt"
-	"github.com/cleonte/go-diceware"
-)
-func main() {
-	p, _ := diceware.Generate(6)
-	fmt.Println(p)
-}
-`
-	os.WriteFile("/tmp/with_diceware.go", []byte(withDicewareCode), 0644)
+	if err := os.WriteFile("/tmp/minimal.go", []byte(minimalCode), 0644); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to write comparison program: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Build minimal
 	cmd := exec.Command("go", "build", "-o", "/tmp/minimal", "/tmp/minimal.go")
-	cmd.Run()
-
-	// Build with diceware (need to ensure module is available)
-	// For this demo, we'll estimate based on wordlist size
+	if err := cmd.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to build comparison binary (is `go` on PATH?): %v\n", err)
+		os.Exit(1)
+	}
 
 	// Get file sizes
-	minimalInfo, _ := os.Stat("/tmp/minimal")
+	minimalInfo, err := os.Stat("/tmp/minimal")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to stat comparison binary: %v\n", err)
+		os.Exit(1)
+	}
 	minimalSize := minimalInfo.Size()
 
 	// Analyze our library components
@@ -63,7 +57,11 @@ func main() {
 	}
 
 	// Check source code size
-	sourceInfo, _ := os.Stat("diceware.go")
+	sourceInfo, err := os.Stat("diceware.go")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: failed to stat diceware.go (run this from the repo root): %v\n", err)
+		os.Exit(1)
+	}
 	sourceSize := sourceInfo.Size()
 	fmt.Printf("   - Library source code: %d bytes (%.1f KB)\n", sourceSize, float64(sourceSize)/1024)
 
@@ -170,7 +168,7 @@ func main() {
 	fmt.Println("=== SUMMARY ===")
 	fmt.Println()
 	fmt.Printf("Binary Size:    +~60 KB (%.1f%% of typical Go binary)\n",
-		(60.0/float64(minimalSize/1024))*100)
+		(60.0/(float64(minimalSize)/1024))*100)
 	fmt.Println("Memory Usage:   +~250 KB")
 	fmt.Println("Startup Time:   +<5ms")
 	fmt.Println("Dependencies:   0 external")
