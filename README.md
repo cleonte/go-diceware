@@ -302,6 +302,10 @@ Generates an English passphrase and returns the dice rolls used to create it.
 
 Generates a passphrase using the specified language(s) and returns the dice rolls used to create it.
 
+#### `GenerateWithRollsLanguageAndSeparator(wordCount int, lang Language, separator string) (passphrase string, rolls []string, err error)`
+
+Generates a passphrase using the specified language(s) and separator, and returns the dice rolls used to create it. Use this instead of `GenerateWithRollsAndLanguage` when you need both the rolls and a custom separator - the CLI's `-r -s` combination is implemented with this.
+
 #### `Entropy(wordCount int) float64`
 
 Calculates the bits of entropy for a given number of words, assuming the English wordlist. Equivalent to `EntropyForLanguage(wordCount, LanguageEnglish)`.

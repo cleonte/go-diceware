@@ -509,6 +509,57 @@ func TestGenerateWithRollsAndLanguage(t *testing.T) {
 	}
 }
 
+// TestGenerateWithRollsLanguageAndSeparator covers the separator-aware
+// variant that the CLI uses for `-r` + `-s` combined, instead of the old
+// approach of reconstructing word boundaries from the capitalized string.
+func TestGenerateWithRollsLanguageAndSeparator(t *testing.T) {
+	tests := []struct {
+		name      string
+		wordCount int
+		lang      Language
+		separator string
+	}{
+		{"English dash", 4, LanguageEnglish, "-"},
+		{"English space", 4, LanguageEnglish, " "},
+		{"Romanian underscore", 4, LanguageRomanian, "_"},
+		{"Mixed dot", 5, LanguageMixed, "."},
+		{"No separator", 4, LanguageEnglish, ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			passphrase, rolls, err := GenerateWithRollsLanguageAndSeparator(tt.wordCount, tt.lang, tt.separator)
+			if err != nil {
+				t.Fatalf("GenerateWithRollsLanguageAndSeparator() error = %v", err)
+			}
+			if len(rolls) != tt.wordCount {
+				t.Errorf("got %d rolls, want %d", len(rolls), tt.wordCount)
+			}
+
+			wordsInPassphrase := strings.Split(passphrase, tt.separator)
+			if tt.separator == "" {
+				// Can't split on empty separator; fall back to counting the
+				// dice rolls, which is what the caller actually controls.
+				return
+			}
+			if len(wordsInPassphrase) != tt.wordCount {
+				t.Errorf("passphrase %q split on %q gives %d words, want %d",
+					passphrase, tt.separator, len(wordsInPassphrase), tt.wordCount)
+			}
+			for _, w := range wordsInPassphrase {
+				if w == "" {
+					t.Errorf("passphrase %q has an empty word segment", passphrase)
+				}
+			}
+		})
+	}
+
+	// word count validation must match the other Generate* functions
+	if _, _, err := GenerateWithRollsLanguageAndSeparator(0, LanguageEnglish, "-"); err == nil {
+		t.Error("GenerateWithRollsLanguageAndSeparator(0, ...) should return an error")
+	}
+}
+
 // TestWordlistSizeByLanguage tests wordlist size retrieval by language
 func TestWordlistSizeByLanguage(t *testing.T) {
 	tests := []struct {

@@ -355,6 +355,18 @@ func GenerateWithRolls(wordCount int) (passphrase string, rolls []string, err er
 //
 // Returns a passphrase, a slice of dice roll strings, and an error.
 func GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase string, rolls []string, err error) {
+	return GenerateWithRollsLanguageAndSeparator(wordCount, lang, "")
+}
+
+// GenerateWithRollsLanguageAndSeparator returns both the passphrase and the dice rolls used to
+// generate it, using the specified language(s) and joining the words with the provided separator.
+//
+// This is the separator-aware counterpart to GenerateWithRollsAndLanguage - use it instead of
+// post-processing an already-joined passphrase to insert a separator, since that requires
+// guessing word boundaries back out of the capitalized string.
+//
+// Returns a passphrase, a slice of dice roll strings, and an error.
+func GenerateWithRollsLanguageAndSeparator(wordCount int, lang Language, separator string) (passphrase string, rolls []string, err error) {
 	if wordCount < 1 {
 		return "", nil, fmt.Errorf("word count must be at least 1, got %d", wordCount)
 	}
@@ -371,7 +383,7 @@ func GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase stri
 		rolls[i] = roll
 	}
 
-	return strings.Join(words, ""), rolls, nil
+	return strings.Join(words, separator), rolls, nil
 }
 
 // Entropy calculates the bits of entropy for a given number of words,
