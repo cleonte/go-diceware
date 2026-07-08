@@ -3,6 +3,7 @@ package diceware
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestGenerate(t *testing.T) {
@@ -375,6 +376,13 @@ func TestCapitalize(t *testing.T) {
 		{"", ""},
 		{"Hello", "Hello"},
 		{"WORLD", "WORLD"},
+		// Multi-byte UTF-8 leading runes must capitalize correctly instead
+		// of being byte-sliced and corrupted (word[:1] would grab only the
+		// first byte of a 2+ byte encoded rune).
+		{"école", "École"},
+		{"über", "Über"},
+		{"île", "Île"},
+		{"ñandu", "Ñandu"},
 	}
 
 	for _, tt := range tests {
@@ -382,6 +390,9 @@ func TestCapitalize(t *testing.T) {
 			got := capitalize(tt.input)
 			if got != tt.want {
 				t.Errorf("capitalize(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+			if !utf8.ValidString(got) {
+				t.Errorf("capitalize(%q) = %q is not valid UTF-8", tt.input, got)
 			}
 		})
 	}

@@ -43,6 +43,8 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 //go:embed internal/wordlist/eff_large_wordlist.txt
@@ -254,11 +256,22 @@ func getWordFromLanguage(lang Language) (string, error) {
 }
 
 // capitalize returns the word with the first letter capitalized
+// capitalize returns the word with the first letter capitalized. It decodes
+// the first rune rather than slicing the first byte, so multi-byte UTF-8
+// characters (e.g. accented letters) are capitalized correctly instead of
+// being corrupted. Currently a no-op concern for the shipped wordlists (no
+// surviving entry starts with a multi-byte rune), but wordlists change.
 func capitalize(word string) string {
-	if len(word) == 0 {
+	if word == "" {
 		return word
 	}
-	return strings.ToUpper(word[:1]) + word[1:]
+	r, size := utf8.DecodeRuneInString(word)
+	if r == utf8.RuneError && size <= 1 {
+		// Invalid encoding at the start of the string - leave untouched
+		// rather than risk further corruption.
+		return word
+	}
+	return string(unicode.ToUpper(r)) + word[size:]
 }
 
 // Generate creates a passphrase with the specified number of words.
