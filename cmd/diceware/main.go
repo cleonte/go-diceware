@@ -25,7 +25,7 @@ var rootCmd = &cobra.Command{
 	Use:   "diceware",
 	Short: "Diceware Passphrase Generator",
 	Long: `Generate cryptographically secure passphrases using the Diceware method
-with the EFF large wordlist (7,776 English words) or Romanian wordlist (7,776 words).
+with the EFF large wordlist (7,776 English words) or Romanian wordlist (7,535 usable words).
 
 Words are capitalized and concatenated by default (like "ColtDefaultArousal").`,
 	Example: `  # Generate a 6-word English passphrase (default, no separator)
@@ -56,6 +56,7 @@ Words are capitalized and concatenated by default (like "ColtDefaultArousal").`,
 
   # Generate 10-word Romanian passphrase with underscores
   diceware -w 10 -l ro -s "_"`,
+	Args:          cobra.NoArgs,
 	RunE:          run,
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -88,17 +89,9 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("word count must be between %d and %d", minWords, maxWords)
 	}
 
-	// Parse language
-	var lang diceware.Language
-	switch language {
-	case "en", "english":
-		lang = diceware.LanguageEnglish
-	case "ro", "romanian":
-		lang = diceware.LanguageRomanian
-	case "mixed", "mix":
-		lang = diceware.LanguageMixed
-	default:
-		return fmt.Errorf("unsupported language '%s'. Use: en, ro, or mixed", language)
+	lang, err := diceware.ParseLanguage(language)
+	if err != nil {
+		return err
 	}
 
 	// Generate passphrase
@@ -121,14 +114,8 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Show entropy information
 	entropy := diceware.EntropyForLanguage(words, lang)
-	langName := "English"
-	if lang == diceware.LanguageRomanian {
-		langName = "Romanian"
-	} else if lang == diceware.LanguageMixed {
-		langName = "Mixed (English + Romanian)"
-	}
 	fmt.Fprintf(os.Stderr, "\nEntropy: %.1f bits (%d words, %s wordlist)\n",
-		entropy, words, langName)
+		entropy, words, lang)
 
 	return nil
 }
