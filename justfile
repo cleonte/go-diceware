@@ -13,12 +13,12 @@ build:
 # Run tests with race detection and coverage
 test:
     @echo "Running tests..."
-    @go test -v -race -coverprofile=coverage.txt -covermode=atomic
+    @go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
 
 # Run benchmarks
 bench:
     @echo "Running benchmarks..."
-    @go test -bench=. -benchmem
+    @go test -bench=. -benchmem ./...
 
 # Generate and open coverage report
 coverage: test
@@ -42,11 +42,15 @@ install:
 lint:
     @echo "Running linters..."
     @go vet ./...
-    @go fmt ./...
+    @test -z "$(gofmt -l .)" || (echo "Unformatted files:"; gofmt -l .; exit 1)
 
 # Run all checks before commit
-check: lint test
+check: lint build-examples test
     @echo "✅ All checks passed!"
+
+# Ensure all examples compile
+build-examples:
+    @go build -o /dev/null ./examples/...
 
 # Run example program
 example:

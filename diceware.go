@@ -79,6 +79,35 @@ const (
 	LanguageMixed
 )
 
+// String returns the display name of the language.
+func (l Language) String() string {
+	switch l {
+	case LanguageEnglish:
+		return "English"
+	case LanguageRomanian:
+		return "Romanian"
+	case LanguageMixed:
+		return "Mixed (English + Romanian)"
+	default:
+		return fmt.Sprintf("Language(%d)", int(l))
+	}
+}
+
+// ParseLanguage converts a user-supplied name (case-insensitive) to a
+// Language. Accepted: "en"/"english", "ro"/"romanian", "mixed"/"mix".
+func ParseLanguage(name string) (Language, error) {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "en", "english":
+		return LanguageEnglish, nil
+	case "ro", "romanian":
+		return LanguageRomanian, nil
+	case "mixed", "mix":
+		return LanguageMixed, nil
+	default:
+		return 0, fmt.Errorf("unsupported language %q (use: en, ro, or mixed)", name)
+	}
+}
+
 func init() {
 	wordlistEnglish = parseWordlist(wordlistEnglishData)
 	wordlistRomanian = parseWordlist(wordlistRomanianData)
@@ -155,17 +184,22 @@ func rollDice() (int, error) {
 	return int(n.Int64()) + 1, nil
 }
 
-// rollFiveDice rolls five dice and returns the result as a string (e.g., "11111")
+// rollFiveDice rolls five dice and returns the result as a string (e.g., "11111").
+// It draws a single uniform value in [0, 6^5) and renders it as five base-6
+// digits shifted to 1-6, which is equivalent to five independent d6 rolls
+// but needs one read from the CSPRNG instead of five.
 func rollFiveDice() (string, error) {
-	var result strings.Builder
-	for i := 0; i < 5; i++ {
-		roll, err := rollDice()
-		if err != nil {
-			return "", err
-		}
-		result.WriteString(fmt.Sprintf("%d", roll))
+	n, err := rand.Int(rand.Reader, big.NewInt(7776))
+	if err != nil {
+		return "", fmt.Errorf("failed to generate random number: %w", err)
 	}
-	return result.String(), nil
+	v := int(n.Int64())
+	var digits [5]byte
+	for i := 4; i >= 0; i-- {
+		digits[i] = byte('1' + v%6)
+		v /= 6
+	}
+	return string(digits[:]), nil
 }
 
 // getWord rolls five dice and returns the corresponding word from the wordlist,
@@ -255,7 +289,6 @@ func getWordFromLanguage(lang Language) (string, error) {
 	return capitalize(word), nil
 }
 
-// capitalize returns the word with the first letter capitalized
 // capitalize returns the word with the first letter capitalized. It decodes
 // the first rune rather than slicing the first byte, so multi-byte UTF-8
 // characters (e.g. accented letters) are capitalized correctly instead of
