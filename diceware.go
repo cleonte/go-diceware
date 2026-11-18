@@ -60,11 +60,11 @@ var wordlistRomanian map[string]string
 // validWordCountEnglish and validWordCountRomanian track how many entries in
 // each wordlist actually get used to produce a word (i.e., how many survive
 // isValidWord). English entries are never filtered during generation, so its
-// count always equals len(wordlistEnglish). Romanian's raw map includes ~241
-// filler entries (digits/symbols used to fill out all 7,776 roll
-// combinations) that getWordFromLanguage rerolls past, so its usable count is
-// lower than len(wordlistRomanian). These are the counts that must be used
-// for entropy/size reporting, not the raw map length.
+// count always equals len(wordlistEnglish). Entries that fail isValidWord
+// are rerolled past during generation, so a list that has some (the previous
+// Romanian list had 241 filler entries) has a usable count below its map
+// length. These are the counts that must be used for entropy/size reporting,
+// not the raw map length.
 var validWordCountEnglish int
 var validWordCountRomanian int
 
@@ -269,8 +269,7 @@ func isValidWord(word string) bool {
 
 // rollWord rolls five dice and resolves them to a word for the specified
 // language, rerolling internally (up to maxAttempts) if the roll lands on a
-// filtered/invalid entry - e.g. Romanian's ~241 numeric/symbol filler
-// entries. Returns the raw (uncapitalized) word alongside the winning dice
+// filtered/invalid entry (one that fails isValidWord). Returns the raw (uncapitalized) word alongside the winning dice
 // roll string. This is the single place the reroll/language-selection logic
 // lives; getWordFromLanguage and GenerateWithRollsAndLanguage both build on
 // top of it instead of duplicating the switch/reroll logic.
@@ -481,11 +480,10 @@ func Entropy(wordCount int) float64 {
 // fact that different wordlists have different usable sizes:
 //
 //   - English: 7,776 words, ~12.925 bits/word
-//   - Romanian: 7,535 usable words (241 filler entries are skipped during
-//     generation), ~12.879 bits/word
-//   - Mixed: 15,030 distinct usable words (English + valid Romanian, minus
-//     the ~280 words that are identical once capitalized), drawn uniformly,
-//     ~13.875 bits/word
+//   - Romanian: 7,776 words, ~12.925 bits/word
+//   - Mixed: 15,280 distinct words (English + Romanian, minus the 272 words
+//     that are identical once capitalized), drawn uniformly, ~13.900
+//     bits/word
 func EntropyForLanguage(wordCount int, lang Language) float64 {
 	size := WordlistSizeByLanguage(lang)
 	if size < 2 {
@@ -501,8 +499,7 @@ func WordlistSize() int {
 
 // WordlistSizeByLanguage returns the number of usable words in the wordlist
 // for the specified language, i.e., the number of distinct dice rolls that
-// actually produce a word during generation (not the raw entry count -
-// Romanian's raw wordlist includes ~241 filler entries that are skipped).
+// actually produce a word during generation (not the raw entry count).
 func WordlistSizeByLanguage(lang Language) int {
 	switch lang {
 	case LanguageEnglish:

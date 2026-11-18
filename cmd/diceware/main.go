@@ -46,7 +46,7 @@ func newRootCmd(stdout, stderr io.Writer) *cobra.Command {
 		Use:   "diceware",
 		Short: "Diceware Passphrase Generator",
 		Long: `Generate cryptographically secure passphrases using the Diceware method
-with the EFF large wordlist (7,776 English words) or Romanian wordlist (7,535 usable words).
+with the EFF large wordlist (7,776 English words) or Romanian wordlist (7,776 words).
 
 Words are capitalized and concatenated by default (like "ColtDefaultArousal").`,
 		Example: `  # Generate a 6-word English passphrase (default, no separator)
@@ -55,11 +55,11 @@ Words are capitalized and concatenated by default (like "ColtDefaultArousal").`,
 
   # Generate a Romanian passphrase
   diceware -l ro
-  Output: AbaAbagerAbajurAbatajAbateAbator
+  Output: AbajurAbandonAbanosAbatAbatajAbate
 
   # Generate a mixed English and Romanian passphrase
   diceware -l mixed
-  Output: ColtAbagerDefaultAbatajThimbleAbator
+  Output: ColtAbandonDefaultAbanosThimbleAbat
 
   # Generate an 8-word passphrase
   diceware -w 8
@@ -109,7 +109,7 @@ Recommended word counts for different security levels:
 For more information about Diceware:
   https://theworld.com/~reinhold/diceware.html
   https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases
-  https://github.com/danciu/diceware.ro (Romanian wordlist)
+  https://github.com/cleonte/go-diceware/blob/main/NOTICE (wordlist sources)
 `)
 	return cmd
 }

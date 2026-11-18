@@ -46,7 +46,7 @@ func ExampleEntropy() {
 
 func ExampleEntropyForLanguage() {
 	fmt.Printf("%.1f bits\n", diceware.EntropyForLanguage(6, diceware.LanguageMixed))
-	// Output: 83.3 bits
+	// Output: 83.4 bits
 }
 
 func ExampleWordlistSizeByLanguage() {
@@ -54,5 +54,5 @@ func ExampleWordlistSizeByLanguage() {
 	fmt.Println(diceware.WordlistSizeByLanguage(diceware.LanguageMixed))
 	// Output:
 	// 7776
-	// 15030
+	// 15280
 }

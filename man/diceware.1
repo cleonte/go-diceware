@@ -23,7 +23,7 @@ Number of words, 1 to 24. The default is 6.
 .TP
 .BR \-l ", " \-\-lang " \fILANG\fR"
 Wordlist: \fBen\fR (EFF large wordlist, 7,776 words, the default), \fBro\fR
-(Romanian, 7,535 usable words) or \fBmixed\fR (the 15,030 distinct words of
+(Romanian, 7,776 words) or \fBmixed\fR (the 15,280 distinct words of
 both lists, each equally likely).
 .TP
 .BR \-s ", " \-\-separator " \fISEP\fR"
@@ -44,8 +44,8 @@ Print the help.
 Print a completion script for \fBbash\fR, \fBzsh\fR, \fBfish\fR or
 \fBpowershell\fR, for example \fBsource <(diceware completion bash)\fR.
 .SH ENTROPY
-Each word adds log2 of the list size: about 12.9 bits for English, 12.9 for
-Romanian and 13.9 for mixed. Six English words give about 77.5 bits.
+Each word adds log2 of the list size: about 12.9 bits for English and
+Romanian, and 13.9 for mixed. Six English words give about 77.5 bits.
 .SH EXIT STATUS
 0 on success, 1 on an invalid option or a failure to read random numbers.
 .SH EXAMPLES

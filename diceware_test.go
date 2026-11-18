@@ -187,13 +187,12 @@ func TestEntropyForLanguage(t *testing.T) {
 	}{
 		// English is unfiltered (7,776 usable words): matches plain Entropy().
 		{"English matches Entropy", 6, LanguageEnglish, 77.55},
-		// Romanian only has 7,535 usable words (241 filler entries are
-		// skipped), so bits/word is slightly lower than English's 12.925.
-		{"Romanian lower than English", 6, LanguageRomanian, 77.28},
-		// Mixed draws uniformly from the 15,030 distinct usable words of
+		// Romanian has 7,776 words too, so it matches English.
+		{"Romanian matches English", 6, LanguageRomanian, 77.55},
+		// Mixed draws uniformly from the 15,280 distinct words of
 		// both lists, so bits/word is notably higher than either language
 		// alone.
-		{"Mixed higher than either language", 6, LanguageMixed, 83.25},
+		{"Mixed higher than either language", 6, LanguageMixed, 83.40},
 	}
 
 	for _, tt := range tests {
@@ -211,8 +210,8 @@ func TestEntropyForLanguage(t *testing.T) {
 	en := EntropyForLanguage(6, LanguageEnglish)
 	ro := EntropyForLanguage(6, LanguageRomanian)
 	mixed := EntropyForLanguage(6, LanguageMixed)
-	if ro >= en {
-		t.Errorf("Romanian entropy (%f) should be lower than English (%f), since 241 wordlist entries are filtered out", ro, en)
+	if ro > en {
+		t.Errorf("Romanian entropy (%f) should not exceed English (%f)", ro, en)
 	}
 	if mixed <= en {
 		t.Errorf("Mixed entropy (%f) should be higher than English (%f), since it draws from a larger combined wordlist", mixed, en)
@@ -580,14 +579,10 @@ func TestWordlistSizeByLanguage(t *testing.T) {
 		wantSize int
 	}{
 		{"English", LanguageEnglish, 7776},
-		// Romanian's raw wordlist has 7,776 entries too, but 241 are
-		// numeric/symbol filler that isValidWord rejects and
-		// getWordFromLanguage rerolls past, so only 7,535 are actually
-		// reachable during generation.
-		{"Romanian", LanguageRomanian, 7535},
+		{"Romanian", LanguageRomanian, 7776},
 		// Mixed is the union of both usable lists without the words that
 		// are identical once capitalized.
-		{"Mixed", LanguageMixed, 15030},
+		{"Mixed", LanguageMixed, 15280},
 	}
 
 	for _, tt := range tests {
@@ -813,7 +808,7 @@ func TestMixedRollsAreTagged(t *testing.T) {
 }
 
 // TestMixedUniform checks that every word of the pool is equally likely: with
-// the pool of 15,030 words, English entries should make up len(en)/len(pool)
+// the pool of 15,280 words, English entries should make up len(en)/len(pool)
 // of the draws, within 5 standard deviations.
 func TestMixedUniform(t *testing.T) {
 	const n = 100000
@@ -844,5 +839,28 @@ func TestGenerateWithOptions(t *testing.T) {
 	}
 	if _, err := GenerateWithOptions(Options{}); err == nil {
 		t.Error("zero Options (0 words) should fail")
+	}
+}
+
+// TestRomanianWordlistProperties checks the rules that scripts/genro applies,
+// so a hand edit of the list cannot break them.
+func TestRomanianWordlistProperties(t *testing.T) {
+	if len(wordlistRomanian) != 7776 {
+		t.Fatalf("Romanian list has %d entries, want 7776", len(wordlistRomanian))
+	}
+	seen := map[string]bool{}
+	for roll, w := range wordlistRomanian {
+		if len(w) < 3 || len(w) > 7 || !isValidWord(w) || w != strings.ToLower(w) {
+			t.Errorf("%s: %q is not a 3-7 letter lowercase ASCII word", roll, w)
+		}
+		if seen[w] {
+			t.Errorf("%q appears twice", w)
+		}
+		seen[w] = true
+	}
+	for _, bad := range []string{"pula", "pizda", "muie", "cacat", "wiki", "ref"} {
+		if seen[bad] {
+			t.Errorf("%q must not be in the list", bad)
+		}
 	}
 }

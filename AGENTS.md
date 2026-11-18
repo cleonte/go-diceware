@@ -28,6 +28,7 @@ go test -race ./...
 * `internal/wordlist`: the embedded wordlists.
 * `cmd/diceware`: the cobra CLI; `version` is set at release time by
   `-ldflags "-X main.version=..."`.
+* `scripts/genro`: generates `internal/wordlist/ro_diceware.txt` (see its README); do not edit that list by hand.
 * `examples/`: small programs that must keep compiling.
 
 ## Style

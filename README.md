@@ -11,7 +11,7 @@ This library provides both a Go package for integration into your applications a
 - **Cryptographically Secure**: Uses Go's `crypto/rand` for true random number generation
 - **Multiple Wordlists**: 
   - English: [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) with 7,776 carefully selected words
-  - Romanian: [Romanian Diceware wordlist](https://github.com/danciu/diceware.ro) with 7,535 usable words
+  - Romanian: 7,776 common words generated from Romanian Wikipedia and the rospell dictionary (see [NOTICE](NOTICE) and `scripts/genro`)
   - **Mixed Mode**: Generate passphrases with a random mix of English and Romanian words
 - **Capitalized CamelCase**: Words are capitalized and concatenated by default (e.g., `ColtDefaultArousal`)
 - **Library and CLI**: Use it as a Go library in your code or as a standalone CLI tool
@@ -64,18 +64,18 @@ Generate a Romanian passphrase:
 
 ```bash
 $ diceware -l ro
-AbaAbagerAbajurAbatajAbateAbator
+AbajurAbandonAbanosAbatAbatajAbate
 
-Entropy: 77.3 bits (6 words, Romanian wordlist)
+Entropy: 77.5 bits (6 words, Romanian wordlist)
 ```
 
 Generate a mixed English and Romanian passphrase:
 
 ```bash
 $ diceware -l mixed
-ColtAbagerDefaultAbatajThimbleAbator
+ColtAbandonDefaultAbanosThimbleAbat
 
-Entropy: 83.3 bits (6 words, Mixed (English + Romanian) wordlist)
+Entropy: 83.4 bits (6 words, Mixed (English + Romanian) wordlist)
 ```
 
 Specify number of words:
@@ -109,9 +109,9 @@ Generate Romanian passphrase with custom separator:
 
 ```bash
 $ diceware -l ro -w 4 -s "_"
-Aba_Abager_Abajur_Abataj
+Abajur_Abandon_Abanos_Abat
 
-Entropy: 51.5 bits (4 words, Romanian wordlist)
+Entropy: 51.7 bits (4 words, Romanian wordlist)
 ```
 
 Show dice rolls used to generate the passphrase:
@@ -167,7 +167,7 @@ if err != nil {
     log.Fatal(err)
 }
 fmt.Println(passphrase)
-// Output: AbaAbagerAbajurAbatajAbateAbator
+// Output: AbajurAbandonAbanosAbatAbatajAbate
 ```
 
 #### Mixed Language Passphrase
@@ -179,7 +179,7 @@ if err != nil {
     log.Fatal(err)
 }
 fmt.Println(passphrase)
-// Output: ColtAbagerDefaultAbatajThimbleAbator
+// Output: ColtAbandonDefaultAbanosThimbleAbat
 ```
 
 #### Custom Separator
@@ -207,7 +207,7 @@ if err != nil {
     log.Fatal(err)
 }
 fmt.Println(passphrase)
-// Output: Aba_Abager_Abajur_Abataj
+// Output: Abajur_Abandon_Abanos_Abat
 ```
 
 #### With Dice Rolls
@@ -244,8 +244,8 @@ fmt.Printf("Entropy: %.1f bits\n", entropy)
 // Language-aware entropy - Romanian and Mixed have different usable
 // wordlist sizes than English, so their entropy differs too
 enEntropy := diceware.EntropyForLanguage(6, diceware.LanguageEnglish) // 77.5 bits
-roEntropy := diceware.EntropyForLanguage(6, diceware.LanguageRomanian) // 77.3 bits (7,535 usable words)
-mixedEntropy := diceware.EntropyForLanguage(6, diceware.LanguageMixed) // 83.3 bits (15,030 distinct usable words)
+roEntropy := diceware.EntropyForLanguage(6, diceware.LanguageRomanian) // 77.5 bits (7,776 words)
+mixedEntropy := diceware.EntropyForLanguage(6, diceware.LanguageMixed) // 83.4 bits (15,280 distinct words)
 ```
 
 ## Security Considerations
@@ -279,7 +279,7 @@ The security of your passphrase depends on the number of words (figures below as
 1. **Rolling Dice**: The library uses Go's `crypto/rand` to simulate rolling five 6-sided dice
 2. **Looking Up Words**: Each 5-digit number (e.g., "43434") corresponds to a word in the wordlist (English or Romanian)
 3. **Combining Words**: The words are capitalized and joined together with your chosen separator
-4. **Entropy**: Each word adds ~12.925 bits of entropy for English (log₂(7776) ≈ 12.925). Romanian has 7,535 usable words (241 filler entries are skipped). Mixed draws uniformly from the 15,030 distinct words of both lists (about 280 words are in both and count once) - see [Calculate Entropy](#calculate-entropy)
+4. **Entropy**: Each word adds ~12.925 bits of entropy for English (log₂(7776) ≈ 12.925). Romanian has 7,776 words too. Mixed draws uniformly from the 15,280 distinct words of both lists (272 words are in both and count once) - see [Calculate Entropy](#calculate-entropy)
 
 ## API Reference
 
@@ -349,7 +349,7 @@ Returns the number of usable words in the English wordlist (7,776).
 
 #### `WordlistSizeByLanguage(lang Language) int`
 
-Returns the number of usable words in the wordlist for the specified language - i.e., how many distinct dice rolls actually produce a word (English: 7,776; Romanian: 7,535, since 241 filler entries are skipped; Mixed: 15,030 distinct words from both lists combined).
+Returns the number of usable words in the wordlist for the specified language - i.e., how many distinct dice rolls actually produce a word (English: 7,776; Romanian: 7,776; Mixed: 15,280 distinct words from both lists combined).
 
 ## Development
 
@@ -406,12 +406,12 @@ cargo install just
 
 ## About Diceware
 
-Diceware is a method for creating passphrases, originally developed by Arnold Reinhold. This implementation uses the [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) for English and the [Romanian Diceware wordlist](https://github.com/danciu/diceware.ro) by Alex Danciu.
+Diceware is a method for creating passphrases, originally developed by Arnold Reinhold. This implementation uses the [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) for English and a Romanian list generated from Romanian Wikipedia word frequencies and the rospell dictionary (see [NOTICE](NOTICE)).
 
 For more information:
 - [Original Diceware](https://theworld.com/~reinhold/diceware.html)
 - [EFF Wordlist Announcement](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases)
-- [Romanian Diceware](https://github.com/danciu/diceware.ro)
+- [rospell, the Romanian dictionary](http://rospell.sourceforge.net)
 - [XKCD: Password Strength](https://xkcd.com/936/)
 
 ## License
