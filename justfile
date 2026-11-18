@@ -46,7 +46,7 @@ lint:
     @test -z "$(gofmt -l .)" || (echo "Unformatted files:"; gofmt -l .; exit 1)
 
 # Run all checks before commit
-check: lint build-examples test
+check: lint vuln build-examples test
     @echo "✅ All checks passed!"
 
 # Ensure all examples compile
@@ -73,30 +73,24 @@ stats:
     @find . -name '*.go' -not -path "*/vendor/*" | xargs wc -l | tail -1
     @echo ""
     @echo "Test coverage:"
-    @go test -cover | grep coverage
+    @go test -cover ./... | grep coverage
 
-# Update dependencies
+# Update dependencies (keeps the go directive in go.mod; check it afterwards)
 update:
     @echo "Updating dependencies..."
     @go get -u ./...
     @go mod tidy
+    @git diff --stat go.mod
 
 # Verify dependencies
 verify:
     @echo "Verifying dependencies..."
     @go mod verify
 
-# Run security checks (requires gosec)
-security:
-    @echo "Running security checks..."
-    @which gosec > /dev/null || (echo "Install gosec: go install github.com/securego/gosec/v2/cmd/gosec@latest" && exit 1)
-    @gosec ./...
+# Check dependencies for known vulnerabilities (same as CI)
+vuln:
+    @go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
-# Build for multiple platforms
+# Build the release archives locally, without publishing (needs goreleaser)
 build-all:
-    @echo "Building for multiple platforms..."
-    @GOOS=linux GOARCH=amd64 go build -o dist/diceware-linux-amd64 ./cmd/diceware
-    @GOOS=darwin GOARCH=amd64 go build -o dist/diceware-darwin-amd64 ./cmd/diceware
-    @GOOS=darwin GOARCH=arm64 go build -o dist/diceware-darwin-arm64 ./cmd/diceware
-    @GOOS=windows GOARCH=amd64 go build -o dist/diceware-windows-amd64.exe ./cmd/diceware
-    @echo "✅ Built binaries in dist/"
+    @goreleaser release --snapshot --clean --skip=publish

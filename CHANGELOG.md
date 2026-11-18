@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `NOTICE` file with the licences of the embedded wordlists, shipped in the release archives.
+- `MaxWords` (1024): the Generate functions reject larger word counts.
+- Fuzz tests for `ParseLanguage` and the wordlist parser; a chi-square test of the dice rolls.
+- CodeQL workflow, issue and pull request templates, build provenance for release archives.
+
+### Changed
+
+- The wordlists are checked for all 7,776 rolls at startup.
+- `just build-all` runs GoReleaser in snapshot mode; `just vuln` runs govulncheck; `just check` includes it.
+
+### Removed
+
+- The unused `rollDice` helper and its test.
+
 ## [0.2.6] - 2026-11-18
 
 ### Changed

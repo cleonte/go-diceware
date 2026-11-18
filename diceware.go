@@ -108,9 +108,21 @@ func ParseLanguage(name string) (Language, error) {
 	}
 }
 
+// MaxWords is the largest word count the Generate functions accept; it keeps
+// a mistaken argument from allocating an enormous slice.
+const MaxWords = 1024
+
 func init() {
 	wordlistEnglish = parseWordlist(wordlistEnglishData)
 	wordlistRomanian = parseWordlist(wordlistRomanianData)
+
+	// A missing roll would only show up later, as a runtime error for the
+	// unlucky draw, so fail at startup instead.
+	for name, list := range map[string]map[string]string{"English": wordlistEnglish, "Romanian": wordlistRomanian} {
+		if len(list) != 7776 {
+			panic(fmt.Sprintf("%s wordlist has %d entries, want 7776", name, len(list)))
+		}
+	}
 
 	// English words are used as-is (no isValidWord filtering during
 	// generation), so every parsed entry is usable.
@@ -173,15 +185,6 @@ func isValidRoll(roll string) bool {
 		}
 	}
 	return true
-}
-
-// rollDice simulates rolling a single die (1-6) using cryptographically secure random numbers
-func rollDice() (int, error) {
-	n, err := rand.Int(rand.Reader, big.NewInt(6))
-	if err != nil {
-		return 0, fmt.Errorf("failed to generate random number: %w", err)
-	}
-	return int(n.Int64()) + 1, nil
 }
 
 // rollFiveDice rolls five dice and returns the result as a string (e.g., "11111").
@@ -361,6 +364,9 @@ func GenerateWithLanguageAndSeparator(wordCount int, lang Language, separator st
 	if wordCount < 1 {
 		return "", fmt.Errorf("word count must be at least 1, got %d", wordCount)
 	}
+	if wordCount > MaxWords {
+		return "", fmt.Errorf("word count must be at most %d, got %d", MaxWords, wordCount)
+	}
 
 	words := make([]string, wordCount)
 	for i := 0; i < wordCount; i++ {
@@ -402,6 +408,9 @@ func GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase stri
 func GenerateWithRollsLanguageAndSeparator(wordCount int, lang Language, separator string) (passphrase string, rolls []string, err error) {
 	if wordCount < 1 {
 		return "", nil, fmt.Errorf("word count must be at least 1, got %d", wordCount)
+	}
+	if wordCount > MaxWords {
+		return "", nil, fmt.Errorf("word count must be at most %d, got %d", MaxWords, wordCount)
 	}
 
 	words := make([]string, wordCount)

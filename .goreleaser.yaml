@@ -30,6 +30,7 @@ archives:
         formats: [zip]
     files:
       - LICENSE*
+      - NOTICE*
       - README*
       - CHANGELOG*
 checksum:

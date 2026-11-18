@@ -123,19 +123,6 @@ func TestGenerateWithRolls(t *testing.T) {
 	}
 }
 
-func TestRollDice(t *testing.T) {
-	// Test that rollDice returns values between 1 and 6
-	for i := 0; i < 100; i++ {
-		result, err := rollDice()
-		if err != nil {
-			t.Fatalf("rollDice() failed: %v", err)
-		}
-		if result < 1 || result > 6 {
-			t.Errorf("rollDice() = %d, want value between 1 and 6", result)
-		}
-	}
-}
-
 func TestRollFiveDice(t *testing.T) {
 	// Test that rollFiveDice returns a valid 5-digit string
 	for i := 0; i < 100; i++ {
@@ -290,15 +277,6 @@ func BenchmarkGenerate(b *testing.B) {
 	}
 }
 
-func BenchmarkRollDice(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_, err := rollDice()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
 func BenchmarkRollFiveDice(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		_, err := rollFiveDice()
@@ -317,33 +295,65 @@ func BenchmarkGetWord(b *testing.B) {
 	}
 }
 
-// Test for randomness distribution
-func TestRandomnessDistribution(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping randomness distribution test in short mode")
-	}
-
-	// Roll dice many times and ensure distribution is reasonable
-	counts := make(map[int]int)
-	iterations := 6000
-
+// TestRollFiveDiceUniform runs a chi-square test on each of the five digit
+// positions. With 5 degrees of freedom, 30 is far past the p=0.0001 point
+// (25.7), so a correct generator fails about once in 100,000 runs.
+func TestRollFiveDiceUniform(t *testing.T) {
+	const iterations = 60000
+	var counts [5][6]int
 	for i := 0; i < iterations; i++ {
-		result, err := rollDice()
+		roll, err := rollFiveDice()
 		if err != nil {
 			t.Fatal(err)
 		}
-		counts[result]++
-	}
-
-	// Each number should appear roughly 1/6 of the time
-	// With 6000 iterations, expect each number ~1000 times
-	// Allow for statistical variance (between 800 and 1200)
-	for i := 1; i <= 6; i++ {
-		count := counts[i]
-		if count < 800 || count > 1200 {
-			t.Logf("Warning: dice roll %d appeared %d times (expected ~1000)", i, count)
+		for pos, ch := range roll {
+			counts[pos][ch-'1']++
 		}
 	}
+	expected := float64(iterations) / 6
+	for pos := range counts {
+		chi := 0.0
+		for _, c := range counts[pos] {
+			d := float64(c) - expected
+			chi += d * d / expected
+		}
+		if chi > 30 {
+			t.Errorf("digit position %d: chi-square %.1f > 30, counts %v", pos, chi, counts[pos])
+		}
+	}
+}
+
+func TestMaxWords(t *testing.T) {
+	if _, err := Generate(MaxWords + 1); err == nil {
+		t.Errorf("Generate(%d) should fail", MaxWords+1)
+	}
+	if _, err := Generate(MaxWords); err != nil {
+		t.Errorf("Generate(%d) failed: %v", MaxWords, err)
+	}
+}
+
+func FuzzParseLanguage(f *testing.F) {
+	for _, s := range []string{"en", "ro", "mixed", "", "EN", " ro ", "xx"} {
+		f.Add(s)
+	}
+	f.Fuzz(func(t *testing.T, s string) {
+		lang, err := ParseLanguage(s)
+		if err == nil && lang.String() == "" {
+			t.Errorf("ParseLanguage(%q) returned a language with an empty name", s)
+		}
+	})
+}
+
+// FuzzParseWordlist checks that malformed input is either parsed or rejected
+// with the documented panic, never with anything else.
+func FuzzParseWordlist(f *testing.F) {
+	f.Add("11111\tabacus\n11112\tabdomen\n")
+	f.Add("")
+	f.Add("1111\tx\n")
+	f.Fuzz(func(_ *testing.T, data string) {
+		defer func() { _ = recover() }()
+		_ = parseWordlist(data)
+	})
 }
 
 // Test that multiple calls produce different results (not deterministic)
