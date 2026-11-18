@@ -1,3 +1,4 @@
+// Command diceware generates Diceware passphrases from the command line.
 package main
 
 import (
@@ -69,7 +70,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&showRolls, "rolls", "r", false, "show dice rolls used to generate passphrase")
 	rootCmd.Flags().StringVarP(&language, "lang", "l", "en", "language: en (English), ro (Romanian), or mixed")
 
-	rootCmd.SetHelpTemplate(rootCmd.HelpTemplate() + fmt.Sprintf(`
+	rootCmd.SetHelpTemplate(rootCmd.HelpTemplate() + `
 Recommended word counts for different security levels:
   4 words  - ~52 bits  - Minimum for low-value accounts
   6 words  - ~78 bits  - Recommended for most accounts
@@ -80,10 +81,10 @@ For more information about Diceware:
   https://theworld.com/~reinhold/diceware.html
   https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases
   https://github.com/danciu/diceware.ro (Romanian wordlist)
-`))
+`)
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(_ *cobra.Command, _ []string) error {
 	// Validate word count
 	if words < minWords || words > maxWords {
 		return fmt.Errorf("word count must be between %d and %d", minWords, maxWords)

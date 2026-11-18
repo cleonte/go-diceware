@@ -1,3 +1,4 @@
+// Command collision-calculator estimates passphrase collision probabilities.
 package main
 
 import (
@@ -98,15 +99,16 @@ func main() {
 
 	fmt.Println()
 	fmt.Println("=== Interpretation ===")
-	if probCollision < 0.0001 {
+	switch {
+	case probCollision < 0.0001:
 		fmt.Printf("With 4-word passphrases, the collision risk is EXTREMELY LOW.\n")
 		fmt.Printf("You would need approximately %.0f students before reaching 1%% collision probability.\n",
 			math.Sqrt(float64(totalPassphrases.Int64()))*0.12)
-	} else if probCollision < 0.01 {
+	case probCollision < 0.01:
 		fmt.Printf("With 4-word passphrases, the collision risk is VERY LOW.\n")
-	} else if probCollision < 0.5 {
+	case probCollision < 0.5:
 		fmt.Printf("With 4-word passphrases, there is a LOW but measurable collision risk.\n")
-	} else {
+	default:
 		fmt.Printf("With 4-word passphrases, collision is LIKELY.\n")
 	}
 

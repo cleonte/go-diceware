@@ -1,3 +1,4 @@
+// Command impact-analysis shows the security impact of different passphrase lengths.
 package main
 
 import (

@@ -1,3 +1,4 @@
+// Command basic demonstrates basic use of the diceware package.
 package main
 
 import (

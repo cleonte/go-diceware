@@ -15,6 +15,10 @@ jobs:
           go-version-file: go.mod
       - name: Vet
         run: go vet ./...
+      - name: Lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.15.0
       - name: Format check
         run: test -z "$(gofmt -l .)"
       - name: Build examples

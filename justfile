@@ -42,6 +42,7 @@ install:
 lint:
     @echo "Running linters..."
     @go vet ./...
+    @golangci-lint run ./...
     @test -z "$(gofmt -l .)" || (echo "Unformatted files:"; gofmt -l .; exit 1)
 
 # Run all checks before commit

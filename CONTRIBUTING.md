@@ -55,8 +55,15 @@ just check
 
 # This runs:
 # - go vet (static analysis)
+# - golangci-lint run ./... (lint)
 # - go fmt (formatting)
 # - tests
+```
+
+Linting uses [golangci-lint](https://golangci-lint.run/) v2 (config in `.golangci.yml`); run it directly with:
+
+```bash
+golangci-lint run ./...
 ```
 
 ## Contribution Guidelines

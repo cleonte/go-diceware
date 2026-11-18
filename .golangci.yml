@@ -1,0 +1,16 @@
+version: "2"
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - copyloopvar
+    - errorlint
+    - gocritic
+    - misspell
+    - nolintlint
+    - revive
+    - unconvert
+    - unparam
+formatters:
+  enable:
+    - gofmt
