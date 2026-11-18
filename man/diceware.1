@@ -1,0 +1,61 @@
+.TH DICEWARE 1 "2026-11-18" "go-diceware" "User Commands"
+.SH NAME
+diceware \- generate Diceware passphrases
+.SH SYNOPSIS
+.B diceware
+[\fB\-w\fR \fIN\fR] [\fB\-l\fR \fILANG\fR] [\fB\-s\fR \fISEP\fR] [\fB\-r\fR]
+.br
+.B diceware completion
+.IR bash | zsh | fish | powershell
+.SH DESCRIPTION
+.B diceware
+prints a passphrase made of words chosen with the Diceware method, using
+cryptographically secure random numbers (\fBcrypto/rand\fR). Each word is
+capitalized and the words are joined without a separator, for example
+\fBColtDefaultArousal\fR, unless \fB\-s\fR is given.
+.PP
+The passphrase is written to standard output. The entropy is written to
+standard error, so the output can be captured on its own.
+.SH OPTIONS
+.TP
+.BR \-w ", " \-\-words " \fIN\fR"
+Number of words, 1 to 24. The default is 6.
+.TP
+.BR \-l ", " \-\-lang " \fILANG\fR"
+Wordlist: \fBen\fR (EFF large wordlist, 7,776 words, the default), \fBro\fR
+(Romanian, 7,535 usable words) or \fBmixed\fR (the 15,030 distinct words of
+both lists, each equally likely).
+.TP
+.BR \-s ", " \-\-separator " \fISEP\fR"
+String put between the words. The default is none.
+.TP
+.BR \-r ", " \-\-rolls
+Print the dice rolls before the passphrase. In \fBmixed\fR mode each roll is
+prefixed with its list, \fBen:\fR or \fBro:\fR.
+.TP
+.B \-\-version
+Print the version.
+.TP
+.BR \-h ", " \-\-help
+Print the help.
+.SH COMMANDS
+.TP
+.BI completion " SHELL"
+Print a completion script for \fBbash\fR, \fBzsh\fR, \fBfish\fR or
+\fBpowershell\fR, for example \fBsource <(diceware completion bash)\fR.
+.SH ENTROPY
+Each word adds log2 of the list size: about 12.9 bits for English, 12.9 for
+Romanian and 13.9 for mixed. Six English words give about 77.5 bits.
+.SH EXIT STATUS
+0 on success, 1 on an invalid option or a failure to read random numbers.
+.SH EXAMPLES
+.nf
+diceware
+diceware \-w 8 \-s "\-"
+diceware \-l mixed \-r
+.fi
+.SH SEE ALSO
+https://github.com/cleonte/go-diceware
+.SH COPYRIGHT
+MIT licence. The embedded wordlists have their own licences; see the NOTICE
+file.

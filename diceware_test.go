@@ -1,6 +1,7 @@
 package diceware
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -189,10 +190,10 @@ func TestEntropyForLanguage(t *testing.T) {
 		// Romanian only has 7,535 usable words (241 filler entries are
 		// skipped), so bits/word is slightly lower than English's 12.925.
 		{"Romanian lower than English", 6, LanguageRomanian, 77.28},
-		// Mixed draws from the combined 15,311-word usable space (English +
-		// valid Romanian), so bits/word is notably higher than either
-		// language alone.
-		{"Mixed higher than either language", 6, LanguageMixed, 83.41},
+		// Mixed draws uniformly from the 15,030 distinct usable words of
+		// both lists, so bits/word is notably higher than either language
+		// alone.
+		{"Mixed higher than either language", 6, LanguageMixed, 83.25},
 	}
 
 	for _, tt := range tests {
@@ -509,8 +510,9 @@ func TestGenerateWithRollsAndLanguage(t *testing.T) {
 			if len(rolls) != 4 {
 				t.Errorf("GenerateWithRollsAndLanguage() returned %d rolls, want 4", len(rolls))
 			}
-			// Verify each roll is 5 digits
+			// Verify each roll is 5 digits (Mixed adds an "en:" or "ro:" prefix)
 			for i, roll := range rolls {
+				roll = strings.TrimPrefix(strings.TrimPrefix(roll, "en:"), "ro:")
 				if len(roll) != 5 {
 					t.Errorf("Roll %d has length %d, want 5: %s", i, len(roll), roll)
 				}
@@ -583,8 +585,9 @@ func TestWordlistSizeByLanguage(t *testing.T) {
 		// getWordFromLanguage rerolls past, so only 7,535 are actually
 		// reachable during generation.
 		{"Romanian", LanguageRomanian, 7535},
-		// Mixed combines both usable pools.
-		{"Mixed", LanguageMixed, 7776 + 7535},
+		// Mixed is the union of both usable lists without the words that
+		// are identical once capitalized.
+		{"Mixed", LanguageMixed, 15030},
 	}
 
 	for _, tt := range tests {
@@ -768,5 +771,78 @@ func TestParseWordlistValidation(t *testing.T) {
 			}()
 			_ = parseWordlist(tt.data)
 		})
+	}
+}
+
+func TestMixedPoolHasNoDuplicates(t *testing.T) {
+	seen := make(map[string]bool, len(mixedPool))
+	for _, e := range mixedPool {
+		key := strings.ToLower(e.word)
+		if seen[key] {
+			t.Fatalf("mixed pool has %q twice", e.word)
+		}
+		seen[key] = true
+		if e.tag != "en" && e.tag != "ro" {
+			t.Fatalf("entry %q has tag %q", e.word, e.tag)
+		}
+	}
+	if len(mixedPool) >= validWordCountEnglish+validWordCountRomanian {
+		t.Errorf("mixed pool has %d words, expected fewer than the %d of both lists", len(mixedPool), validWordCountEnglish+validWordCountRomanian)
+	}
+}
+
+func TestMixedRollsAreTagged(t *testing.T) {
+	_, rolls, err := GenerateWithRollsAndLanguage(200, LanguageMixed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var en, ro int
+	for _, r := range rolls {
+		switch {
+		case strings.HasPrefix(r, "en:") && isValidRoll(r[3:]):
+			en++
+		case strings.HasPrefix(r, "ro:") && isValidRoll(r[3:]):
+			ro++
+		default:
+			t.Fatalf("roll %q is not tagged en:NNNNN or ro:NNNNN", r)
+		}
+	}
+	if en == 0 || ro == 0 {
+		t.Errorf("200 mixed words gave %d English and %d Romanian", en, ro)
+	}
+}
+
+// TestMixedUniform checks that every word of the pool is equally likely: with
+// the pool of 15,030 words, English entries should make up len(en)/len(pool)
+// of the draws, within 5 standard deviations.
+func TestMixedUniform(t *testing.T) {
+	const n = 100000
+	var en int
+	for i := 0; i < n; i++ {
+		_, roll, err := rollWord(LanguageMixed)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.HasPrefix(roll, "en:") {
+			en++
+		}
+	}
+	p := float64(validWordCountEnglish) / float64(len(mixedPool))
+	sd := math.Sqrt(float64(n) * p * (1 - p))
+	if d := math.Abs(float64(en) - float64(n)*p); d > 5*sd {
+		t.Errorf("%d English draws of %d, want %.0f +- %.0f", en, n, float64(n)*p, 5*sd)
+	}
+}
+
+func TestGenerateWithOptions(t *testing.T) {
+	res, err := GenerateWithOptions(Options{Words: 3, Language: LanguageMixed, Separator: " "})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(strings.Fields(res.Passphrase)) != 3 || len(res.Rolls) != 3 {
+		t.Errorf("got %q with %d rolls", res.Passphrase, len(res.Rolls))
+	}
+	if _, err := GenerateWithOptions(Options{}); err == nil {
+		t.Error("zero Options (0 words) should fail")
 	}
 }

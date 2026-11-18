@@ -75,7 +75,7 @@ Generate a mixed English and Romanian passphrase:
 $ diceware -l mixed
 ColtAbagerDefaultAbatajThimbleAbator
 
-Entropy: 83.4 bits (6 words, Mixed (English + Romanian) wordlist)
+Entropy: 83.3 bits (6 words, Mixed (English + Romanian) wordlist)
 ```
 
 Specify number of words:
@@ -122,6 +122,15 @@ Dice rolls: [46122 33544 21546]
 Passphrase: PuritanHatlessCubicle
 
 Entropy: 38.8 bits (3 words, English wordlist)
+```
+
+In Mixed mode (`-l mixed`) each roll is prefixed with its list, for example `en:46122 ro:33544`.
+
+Shell completion and the man page:
+
+```bash
+source <(diceware completion bash)   # also zsh, fish, powershell
+man diceware                         # installed by the Homebrew cask
 ```
 
 ### Library Usage
@@ -236,7 +245,7 @@ fmt.Printf("Entropy: %.1f bits\n", entropy)
 // wordlist sizes than English, so their entropy differs too
 enEntropy := diceware.EntropyForLanguage(6, diceware.LanguageEnglish) // 77.5 bits
 roEntropy := diceware.EntropyForLanguage(6, diceware.LanguageRomanian) // 77.3 bits (7,535 usable words)
-mixedEntropy := diceware.EntropyForLanguage(6, diceware.LanguageMixed) // 83.4 bits (15,311 usable words)
+mixedEntropy := diceware.EntropyForLanguage(6, diceware.LanguageMixed) // 83.3 bits (15,030 distinct usable words)
 ```
 
 ## Security Considerations
@@ -270,7 +279,7 @@ The security of your passphrase depends on the number of words (figures below as
 1. **Rolling Dice**: The library uses Go's `crypto/rand` to simulate rolling five 6-sided dice
 2. **Looking Up Words**: Each 5-digit number (e.g., "43434") corresponds to a word in the wordlist (English or Romanian)
 3. **Combining Words**: The words are capitalized and joined together with your chosen separator
-4. **Entropy**: Each word adds ~12.925 bits of entropy for English (log₂(7776) ≈ 12.925). Romanian and Mixed differ since 241 wordlist entries are filtered out - see [Calculate Entropy](#calculate-entropy)
+4. **Entropy**: Each word adds ~12.925 bits of entropy for English (log₂(7776) ≈ 12.925). Romanian has 7,535 usable words (241 filler entries are skipped). Mixed draws uniformly from the 15,030 distinct words of both lists (about 280 words are in both and count once) - see [Calculate Entropy](#calculate-entropy)
 
 ## API Reference
 
@@ -285,6 +294,18 @@ Represents the language for passphrase generation:
 - `LanguageMixed` - Generate passphrases using a random mix of English and Romanian words
 
 ### Functions
+
+#### `GenerateWithOptions(o Options) (Result, error)`
+
+One call for everything: `Options{Words, Language, Separator}` in, `Result{Passphrase, Rolls}` out. The `Generate*` functions below remain.
+
+```go
+res, err := diceware.GenerateWithOptions(diceware.Options{
+    Words:     6,
+    Language:  diceware.LanguageMixed,
+    Separator: "-",
+})
+```
 
 #### `Generate(wordCount int) (string, error)`
 
@@ -308,7 +329,7 @@ Generates an English passphrase and returns the dice rolls used to create it.
 
 #### `GenerateWithRollsAndLanguage(wordCount int, lang Language) (passphrase string, rolls []string, err error)`
 
-Generates a passphrase using the specified language(s) and returns the dice rolls used to create it.
+Generates a passphrase using the specified language(s) and returns the dice rolls used to create it. In Mixed mode each roll is prefixed with the list it belongs to (`en:46122`, `ro:33544`), since the same five digits mean a different word in each list.
 
 #### `GenerateWithRollsLanguageAndSeparator(wordCount int, lang Language, separator string) (passphrase string, rolls []string, err error)`
 
@@ -328,7 +349,7 @@ Returns the number of usable words in the English wordlist (7,776).
 
 #### `WordlistSizeByLanguage(lang Language) int`
 
-Returns the number of usable words in the wordlist for the specified language - i.e., how many distinct dice rolls actually produce a word (English: 7,776; Romanian: 7,535, since 241 filler entries are skipped; Mixed: 15,311 combined).
+Returns the number of usable words in the wordlist for the specified language - i.e., how many distinct dice rolls actually produce a word (English: 7,776; Romanian: 7,535, since 241 filler entries are skipped; Mixed: 15,030 distinct words from both lists combined).
 
 ## Development
 

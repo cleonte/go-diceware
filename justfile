@@ -93,4 +93,4 @@ vuln:
 
 # Build the release archives locally, without publishing (needs goreleaser)
 build-all:
-    @goreleaser release --snapshot --clean --skip=publish
+    @HOMEBREW_TAP_TOKEN= goreleaser release --snapshot --clean --skip=publish

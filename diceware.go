@@ -42,6 +42,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -66,6 +67,19 @@ var wordlistRomanian map[string]string
 // for entropy/size reporting, not the raw map length.
 var validWordCountEnglish int
 var validWordCountRomanian int
+
+// mixedEntry is one distinct word of the Mixed pool and where it came from.
+type mixedEntry struct {
+	word string
+	tag  string // "en" or "ro"
+	roll string
+}
+
+// mixedPool holds every distinct usable word of both lists. About 280 words
+// (Absurd, Album, Atlas, ...) are in both lists and look identical once
+// capitalized, so they appear once, as English entries. Mixed mode draws
+// uniformly from this pool, which makes its size and entropy exact.
+var mixedPool []mixedEntry
 
 // Language represents the language for passphrase generation
 type Language int
@@ -136,6 +150,35 @@ func init() {
 			validWordCountRomanian++
 		}
 	}
+
+	mixedPool = buildMixedPool(wordlistEnglish, wordlistRomanian)
+}
+
+// buildMixedPool merges the usable words of both lists, dropping Romanian
+// words that match an English word ignoring case. The order is by dice roll,
+// English first, so the pool is the same on every run.
+func buildMixedPool(english, romanian map[string]string) []mixedEntry {
+	pool := make([]mixedEntry, 0, len(english)+len(romanian))
+	seen := make(map[string]bool, len(english)+len(romanian))
+	add := func(list map[string]string, tag string) {
+		rolls := make([]string, 0, len(list))
+		for roll := range list {
+			rolls = append(rolls, roll)
+		}
+		sort.Strings(rolls)
+		for _, roll := range rolls {
+			word := list[roll]
+			key := strings.ToLower(word)
+			if (tag == "ro" && !isValidWord(word)) || seen[key] {
+				continue
+			}
+			seen[key] = true
+			pool = append(pool, mixedEntry{word: word, tag: tag, roll: roll})
+		}
+	}
+	add(english, "en")
+	add(romanian, "ro")
+	return pool
 }
 
 // parseWordlist parses the embedded wordlist file into a map
@@ -253,20 +296,15 @@ func rollWord(lang Language) (word string, roll string, err error) {
 				continue
 			}
 		case LanguageMixed:
-			// For mixed mode, randomly choose between English and Romanian
-			useBool, berr := rand.Int(rand.Reader, big.NewInt(2))
+			// Mixed mode ignores the dice roll above and draws one entry
+			// uniformly from the pool of distinct words. The roll that is
+			// reported is the entry's roll in its own list, tagged with it.
+			idx, berr := rand.Int(rand.Reader, big.NewInt(int64(len(mixedPool))))
 			if berr != nil {
-				return "", "", fmt.Errorf("failed to select language: %w", berr)
+				return "", "", fmt.Errorf("failed to select word: %w", berr)
 			}
-			if useBool.Int64() == 0 {
-				word, exists = wordlistEnglish[roll]
-			} else {
-				word, exists = wordlistRomanian[roll]
-				// Re-roll if we get a non-word from Romanian wordlist
-				if exists && !isValidWord(word) {
-					continue
-				}
-			}
+			e := mixedPool[idx.Int64()]
+			return e.word, e.tag + ":" + e.roll, nil
 		default:
 			return "", "", fmt.Errorf("unsupported language: %v", lang)
 		}
@@ -445,9 +483,9 @@ func Entropy(wordCount int) float64 {
 //   - English: 7,776 words, ~12.925 bits/word
 //   - Romanian: 7,535 usable words (241 filler entries are skipped during
 //     generation), ~12.879 bits/word
-//   - Mixed: 15,311 usable words combined (English + valid Romanian),
-//     ~13.902 bits/word, since each word also carries the extra bit from
-//     the English/Romanian coin flip
+//   - Mixed: 15,030 distinct usable words (English + valid Romanian, minus
+//     the ~280 words that are identical once capitalized), drawn uniformly,
+//     ~13.875 bits/word
 func EntropyForLanguage(wordCount int, lang Language) float64 {
 	size := WordlistSizeByLanguage(lang)
 	if size < 2 {
@@ -472,13 +510,34 @@ func WordlistSizeByLanguage(lang Language) int {
 	case LanguageRomanian:
 		return validWordCountRomanian
 	case LanguageMixed:
-		// Mixed mode selects with a fair coin flip between the two
-		// wordlists and rerolls the whole attempt (coin + dice) if it
-		// lands on an invalid Romanian entry. That rejection sampling
-		// preserves uniformity, so the combined usable space really is
-		// just the sum of both usable counts.
-		return validWordCountEnglish + validWordCountRomanian
+		return len(mixedPool)
 	default:
 		return 0
 	}
+}
+
+// Options selects what GenerateWithOptions generates. The zero Language is
+// English and the zero Separator joins the words with nothing.
+type Options struct {
+	Words     int
+	Language  Language
+	Separator string
+}
+
+// Result is a generated passphrase and the dice rolls it came from. In Mixed
+// mode each roll is prefixed with its list ("en:46122" or "ro:33544").
+type Result struct {
+	Passphrase string
+	Rolls      []string
+}
+
+// GenerateWithOptions generates a passphrase as the Options describe. It is
+// the single entry point that covers every Generate* variant; those remain
+// for compatibility.
+func GenerateWithOptions(o Options) (Result, error) {
+	passphrase, rolls, err := GenerateWithRollsLanguageAndSeparator(o.Words, o.Language, o.Separator)
+	if err != nil {
+		return Result{}, err
+	}
+	return Result{Passphrase: passphrase, Rolls: rolls}, nil
 }
