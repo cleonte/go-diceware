@@ -1,0 +1,5 @@
+* go-diceware 0.1.0 (unreleased)
+- Add --version, release binaries (Linux, macOS, FreeBSD, Windows) with
+  checksums and build provenance, and a Homebrew formula
+  (brew install cleonte/tap/go-diceware).
+- Lint with golangci-lint v2 in CI.

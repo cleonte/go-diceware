@@ -22,6 +22,9 @@ var (
 	language  string
 )
 
+// version is set at release time with -ldflags "-X main.version=...".
+var version = "dev"
+
 var rootCmd = &cobra.Command{
 	Use:   "diceware",
 	Short: "Diceware Passphrase Generator",
@@ -59,6 +62,7 @@ Words are capitalized and concatenated by default (like "ColtDefaultArousal").`,
   diceware -w 10 -l ro -s "_"`,
 	Args:          cobra.NoArgs,
 	RunE:          run,
+	Version:       version,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }

@@ -1,5 +1,7 @@
 # go-diceware
 
+[![CI](https://github.com/cleonte/go-diceware/actions/workflows/ci.yml/badge.svg)](https://github.com/cleonte/go-diceware/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/cleonte/go-diceware)](https://github.com/cleonte/go-diceware/releases/latest) [![Go Reference](https://pkg.go.dev/badge/github.com/cleonte/go-diceware.svg)](https://pkg.go.dev/github.com/cleonte/go-diceware) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A Go implementation of the Diceware passphrase generation method with support for **English** and **Romanian** wordlists, inspired by [diceware.dmuth.org](https://diceware.dmuth.org/). 
 
 This library provides both a Go package for integration into your applications and a command-line tool for generating secure, memorable passphrases with **capitalized words** in **CamelCase format** (no separators by default).

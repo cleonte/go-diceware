@@ -15,7 +15,7 @@ Thank you for considering contributing to go-diceware! This document provides gu
 
 ### Prerequisites
 
-- Go 1.16 or later
+- Go 1.21 or later
 - Git
 - [just](https://github.com/casey/just) (optional but recommended)
 
@@ -159,3 +159,16 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Questions?
 
 Feel free to open an issue if you have questions about contributing!
+
+## Pull requests
+
+* One logical change per commit, with a message describing what changed.
+* Sign off every commit (`git commit -s`): by doing so you certify the
+  [Developer Certificate of Origin](https://developercertificate.org/).
+* See `AGENTS.md` for the layout and `SECURITY.md` for reporting vulnerabilities.
+
+## Releasing
+
+1. Add a `* go-diceware X.Y.Z (released DATE)` section to `NEWS`; it becomes the
+   release notes.
+2. Tag and push: `git tag -a vX.Y.Z -m "go-diceware X.Y.Z" && git push origin vX.Y.Z`.
