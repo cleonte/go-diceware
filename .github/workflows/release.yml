@@ -1,114 +1,44 @@
 name: release
 
-# Pushing a tag vX.Y.Z builds the binaries and publishes a release.
-# Running the workflow by hand builds them without publishing.
 on:
   push:
-    tags: ['v*']
-  workflow_dispatch:
+    tags:
+      - "v*"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build:
+  goreleaser:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - {goos: linux, goarch: amd64}
-          - {goos: linux, goarch: arm64}
-          - {goos: darwin, goarch: amd64}
-          - {goos: darwin, goarch: arm64}
-          - {goos: freebsd, goarch: amd64}
-          - {goos: windows, goarch: amd64}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-go@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # the latest Go, not the go.mod minimum
-          go-version: stable
-      - name: build
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-          CGO_ENABLED: '0'
-        run: |
-          version=dev
-          case "$GITHUB_REF" in refs/tags/v*) version=${GITHUB_REF#refs/tags/v};; esac
-          name=diceware_${version}_${GOOS}_${GOARCH}
-          exe=diceware; [ "$GOOS" = windows ] && exe=diceware.exe
-          mkdir -p dist/$name
-          go build -trimpath -ldflags "-s -w -X main.version=$version" -o dist/$name/$exe ./cmd/diceware
-          cp LICENSE README.md NEWS dist/$name/
-          cd dist
-          if [ "$GOOS" = windows ]; then zip -qr $name.zip $name; else tar czf $name.tar.gz $name; fi
-          rm -r $name
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.goos }}-${{ matrix.goarch }}
-          path: dist/*
+          fetch-depth: 0
 
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/download-artifact@v4
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          path: dist
-          merge-multiple: true
-      - name: checksums
-        run: cd dist && sha256sum * > SHA256SUMS
-      - uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: dist/*
-      - name: publish
-        env:
-          GH_TOKEN: ${{ github.token }}
+          go-version: stable
+          cache: true
+
+      # The body of the release is its section of CHANGELOG.md. A tag without a
+      # section gets the notes GoReleaser generates from the commits.
+      - name: Release notes from CHANGELOG.md
+        id: notes
         run: |
-          # the notes are the NEWS entry of the version
-          awk -v v="${GITHUB_REF_NAME#v}" 'index($0,"* go-diceware " v " ")==1 {p=1; next} /^[*] / {p=0} p' NEWS > notes.md
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          if scripts/release-notes.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"; then
+            echo "flags=--release-notes=$RUNNER_TEMP/release-notes.md" >> "$GITHUB_OUTPUT"
           else
-            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md dist/*
+            echo "CHANGELOG.md has no section for $GITHUB_REF_NAME: GoReleaser generates the notes."
           fi
 
-  # Updates the formula in the tap cleonte/homebrew-tap. The GITHUB_TOKEN of a
-  # workflow cannot push to another repository, so this needs the repository
-  # secret HOMEBREW_TAP_TOKEN (a token with write access to the tap only). Without
-  # the secret the job is skipped.
-  homebrew:
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: publish
-    runs-on: ubuntu-latest
-    env:
-      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-    steps:
-      - name: check for the token
-        run: |
-          [ -n "$HOMEBREW_TAP_TOKEN" ] || echo "HOMEBREW_TAP_TOKEN is not set: tap not updated" >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/checkout@v7
-        if: env.HOMEBREW_TAP_TOKEN != ''
-      - name: update the formula
-        if: env.HOMEBREW_TAP_TOKEN != ''
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean ${{ steps.notes.outputs.flags }}
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          version=${GITHUB_REF_NAME#v}
-          gh release download "$GITHUB_REF_NAME" -p SHA256SUMS -O "$RUNNER_TEMP/SHA256SUMS"
-          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/cleonte/homebrew-tap.git" "$RUNNER_TEMP/tap"
-          packaging/homebrew/render.sh "$version" "$RUNNER_TEMP/SHA256SUMS" > "$RUNNER_TEMP/tap/Formula/go-diceware.rb"
-          cd "$RUNNER_TEMP/tap"
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add Formula/go-diceware.rb
-          git diff --cached --quiet && exit 0
-          git commit -m "Brew formula update for go-diceware version $GITHUB_REF_NAME"
-          git push
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # A token that can push to the tap (cleonte/homebrew-tap); the GITHUB_TOKEN of
+          # a workflow cannot write to another repository. See CONTRIBUTING.md, Releasing.
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}

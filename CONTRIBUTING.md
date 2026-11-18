@@ -169,6 +169,12 @@ Feel free to open an issue if you have questions about contributing!
 
 ## Releasing
 
-1. Add a `* go-diceware X.Y.Z (released DATE)` section to `NEWS`; it becomes the
-   release notes.
-2. Tag and push: `git tag -a vX.Y.Z -m "go-diceware X.Y.Z" && git push origin vX.Y.Z`.
+Pushing a tag `vX.Y.Z` runs the release workflow, which builds the archives (Linux, macOS and Windows, on amd64 and arm64) with [GoReleaser](https://goreleaser.com) and publishes the release. The body of the release is the section of `CHANGELOG.md` for that version (`scripts/release-notes.sh vX.Y.Z` prints it; without a section GoReleaser writes the notes from the commits).
+
+Before tagging:
+
+1. Move what is under "Unreleased" in `CHANGELOG.md` into a section `## [X.Y.Z] - date`.
+2. Check locally: `goreleaser check`, then `goreleaser release --snapshot --clean --skip=publish`.
+3. Tag and push: `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
+
+The release also updates the Homebrew cask in [cleonte/homebrew-tap](https://github.com/cleonte/homebrew-tap) (`homebrew_casks` in `.goreleaser.yaml`). That needs the repository secret `HOMEBREW_TAP_TOKEN`: a fine-grained personal access token with **Contents: read and write on the tap repository only**. Without it the release fails at the publish step, after the archives are built.

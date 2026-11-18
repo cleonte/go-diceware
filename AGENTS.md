@@ -42,8 +42,8 @@ Describe the change in a short paragraph and add a `Signed-off-by:` line.
 
 ## Releasing
 
-Add a `* go-diceware X.Y.Z (released DATE)` section to `NEWS` (it becomes the
-release notes), then `git tag -a vX.Y.Z -m "go-diceware X.Y.Z" && git push origin vX.Y.Z`.
-The `release` workflow builds the binaries, publishes them with `SHA256SUMS`
-and a build attestation, and updates the Homebrew tap when the
-`HOMEBREW_TAP_TOKEN` secret is set.
+Move "Unreleased" in `CHANGELOG.md` into a `## [X.Y.Z] - date` section (it becomes
+the release notes), then `git tag -a vX.Y.Z -m "..." && git push origin vX.Y.Z`.
+The `release` workflow runs GoReleaser (`.goreleaser.yaml`): archives,
+`checksums.txt` and the Homebrew cask in `cleonte/homebrew-tap`, which needs the
+`HOMEBREW_TAP_TOKEN` secret. Check with `goreleaser check`.
