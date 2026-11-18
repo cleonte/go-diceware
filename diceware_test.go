@@ -49,7 +49,7 @@ func TestGenerateWithSeparator(t *testing.T) {
 		separator string
 		wantErr   bool
 	}{
-		{"dash separator", 4, "-", false},
+		{"pipe separator", 4, "|", false},
 		{"underscore separator", 4, "_", false},
 		{"empty separator", 4, "", false},
 		{"space separator", 4, " ", false},
@@ -519,7 +519,7 @@ func TestGenerateWithRollsLanguageAndSeparator(t *testing.T) {
 		lang      Language
 		separator string
 	}{
-		{"English dash", 4, LanguageEnglish, "-"},
+		{"English pipe", 4, LanguageEnglish, "|"},
 		{"English space", 4, LanguageEnglish, " "},
 		{"Romanian underscore", 4, LanguageRomanian, "_"},
 		{"Mixed dot", 5, LanguageMixed, "."},

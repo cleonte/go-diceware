@@ -15,8 +15,8 @@ builds:
     goarch:
       - amd64
       - arm64
-    # main.version, main.commit and main.date are set by GoReleaser's default
-    # ldflags; main.version is what `diceware --version` prints.
+    # main.version is set by GoReleaser's default ldflags; it is what
+    # `diceware --version` prints.
 archives:
   - name_template: >-
       {{- .ProjectName }}_

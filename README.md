@@ -1,6 +1,6 @@
 # go-diceware
 
-[![CI](https://github.com/cleonte/go-diceware/actions/workflows/ci.yml/badge.svg)](https://github.com/cleonte/go-diceware/actions/workflows/ci.yml) [![Release](https://img.shields.io/github/v/release/cleonte/go-diceware)](https://github.com/cleonte/go-diceware/releases/latest) [![Go Reference](https://pkg.go.dev/badge/github.com/cleonte/go-diceware.svg)](https://pkg.go.dev/github.com/cleonte/go-diceware) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/cleonte/go-diceware/actions/workflows/test.yml/badge.svg)](https://github.com/cleonte/go-diceware/actions/workflows/test.yml) [![Release](https://img.shields.io/github/v/release/cleonte/go-diceware)](https://github.com/cleonte/go-diceware/releases/latest) [![Go Reference](https://pkg.go.dev/badge/github.com/cleonte/go-diceware.svg)](https://pkg.go.dev/github.com/cleonte/go-diceware) [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 A Go implementation of the Diceware passphrase generation method with support for **English** and **Romanian** wordlists, inspired by [diceware.dmuth.org](https://diceware.dmuth.org/). 
 
@@ -11,13 +11,13 @@ This library provides both a Go package for integration into your applications a
 - **Cryptographically Secure**: Uses Go's `crypto/rand` for true random number generation
 - **Multiple Wordlists**: 
   - English: [EFF's improved wordlist](https://www.eff.org/deeplinks/2016/07/new-wordlists-random-passphrases) with 7,776 carefully selected words
-  - Romanian: [Romanian Diceware wordlist](https://github.com/danciu/diceware.ro) with 7,776 words
+  - Romanian: [Romanian Diceware wordlist](https://github.com/danciu/diceware.ro) with 7,535 usable words
   - **Mixed Mode**: Generate passphrases with a random mix of English and Romanian words
 - **Capitalized CamelCase**: Words are capitalized and concatenated by default (e.g., `ColtDefaultArousal`)
 - **Library and CLI**: Use it as a Go library in your code or as a standalone CLI tool
 - **Flexible**: Customize word count, separators, and language
-- **Well-Tested**: Comprehensive test suite with >85% coverage
-- **Zero Dependencies**: Only uses Go standard library
+- **Well-Tested**: Comprehensive test suite with >80% coverage
+- **Minimal Dependencies**: The library uses only the Go standard library; the CLI adds cobra
 
 ## Installation
 
@@ -28,6 +28,12 @@ go get github.com/cleonte/go-diceware
 ```
 
 ### As a CLI Tool
+
+```bash
+brew install cleonte/tap/diceware   # macOS
+```
+
+Or with Go:
 
 ```bash
 go install github.com/cleonte/go-diceware/cmd/diceware@latest

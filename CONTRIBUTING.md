@@ -54,9 +54,9 @@ Before submitting a pull request, ensure your code passes all checks:
 just check
 
 # This runs:
-# - go vet (static analysis)
-# - golangci-lint run ./... (lint)
-# - go fmt (formatting)
+# - go vet and golangci-lint run ./...
+# - a gofmt check
+# - an examples build
 # - tests
 ```
 
@@ -89,7 +89,7 @@ golangci-lint run ./...
 - Update README.md if adding new features
 - Add godoc comments for exported functions
 - Include examples for new functionality
-- Update CHANGELOG.md (if we add one)
+- Add an entry under "Unreleased" in CHANGELOG.md
 
 ### Commit Messages
 
@@ -114,6 +114,9 @@ Add support for custom wordlists
 - Provide a clear description of the changes
 - Ensure all tests pass
 - Update documentation as needed
+- Sign off every commit (`git commit -s`): by doing so you certify the
+  [Developer Certificate of Origin](https://developercertificate.org/)
+- See `AGENTS.md` for the layout
 
 ## What to Contribute
 
@@ -143,7 +146,7 @@ When reporting bugs, please include:
 
 ## Security Issues
 
-If you discover a security vulnerability, please email the maintainer directly rather than opening a public issue.
+If you discover a security vulnerability, please follow [SECURITY.md](SECURITY.md) and report it privately rather than opening a public issue.
 
 ## Code of Conduct
 
@@ -159,13 +162,6 @@ By contributing, you agree that your contributions will be licensed under the MI
 ## Questions?
 
 Feel free to open an issue if you have questions about contributing!
-
-## Pull requests
-
-* One logical change per commit, with a message describing what changed.
-* Sign off every commit (`git commit -s`): by doing so you certify the
-  [Developer Certificate of Origin](https://developercertificate.org/).
-* See `AGENTS.md` for the layout and `SECURITY.md` for reporting vulnerabilities.
 
 ## Releasing
 

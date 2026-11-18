@@ -15,21 +15,21 @@
 //	fmt.Println(passphrase)
 //
 //	// Generate with custom separator
-//	passphrase, err := diceware.GenerateWithSeparator(6, "-")
+//	passphrase, err = diceware.GenerateWithSeparator(6, "-")
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	fmt.Println(passphrase)
 //
 //	// Generate Romanian passphrase
-//	passphrase, err := diceware.GenerateWithLanguage(6, LanguageRomanian)
+//	passphrase, err = diceware.GenerateWithLanguage(6, diceware.LanguageRomanian)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}
 //	fmt.Println(passphrase)
 //
 //	// Generate mixed English and Romanian passphrase
-//	passphrase, err := diceware.GenerateWithLanguage(6, LanguageMixed)
+//	passphrase, err = diceware.GenerateWithLanguage(6, diceware.LanguageMixed)
 //	if err != nil {
 //	    log.Fatal(err)
 //	}

@@ -4,6 +4,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 
 	"github.com/cleonte/go-diceware"
 	"github.com/spf13/cobra"
@@ -12,7 +14,7 @@ import (
 const (
 	defaultWords = 6
 	minWords     = 1
-	maxWords     = 20
+	maxWords     = 24
 )
 
 var (
@@ -22,8 +24,19 @@ var (
 	language  string
 )
 
-// version is set at release time with -ldflags "-X main.version=...".
+// version is set at release time with -ldflags "-X main.version=...";
+// "go install" builds fall back to the module version.
 var version = "dev"
+
+func buildVersion() string {
+	if version != "dev" {
+		return version
+	}
+	if info, ok := debug.ReadBuildInfo(); ok && info.Main.Version != "" && info.Main.Version != "(devel)" {
+		return strings.TrimPrefix(info.Main.Version, "v")
+	}
+	return version
+}
 
 var rootCmd = &cobra.Command{
 	Use:   "diceware",
@@ -62,7 +75,7 @@ Words are capitalized and concatenated by default (like "ColtDefaultArousal").`,
   diceware -w 10 -l ro -s "_"`,
 	Args:          cobra.NoArgs,
 	RunE:          run,
-	Version:       version,
+	Version:       buildVersion(),
 	SilenceUsage:  true,
 	SilenceErrors: true,
 }
