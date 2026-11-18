@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-11-18
+
+### Changed
+
+- The CLI accepts up to 24 words (was 20), as the README recommends.
+- `--version` falls back to the module version for builds from `go install`.
+- Updated pflag to v1.1.0.
+
+### Fixed
+
+- Two tests split passphrases on `-`, which occurs inside some EFF words (`yo-yo`, `t-shirt`), so they failed at random.
+- README: CI badge URL, Romanian word count (7,535 usable), coverage and dependency claims; the package documentation example now compiles.
+
 ## [0.2.5] - 2026-11-18
 
 ### Added
